@@ -1,0 +1,32 @@
+# Build artifacts
+/target/
+**/*.rs.bk
+
+# Generated files
+rules.json
+bangumi_results.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude Code configuration
+.claude/
+
+# Logs
+*.log
+
+# Backup files
+*.bak
+*.backup

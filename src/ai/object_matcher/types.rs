@@ -32,6 +32,25 @@ pub struct AiMatchResponse {
     pub reasoning: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchMatchRequest {
+    pub source_works: Vec<SourceWork>,
+    pub candidate_works_map: Vec<Vec<CandidateWork>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchMatchResponse {
+    pub matches: Vec<BatchMatchResult>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchMatchResult {
+    pub source_index: usize,
+    pub matched_bangumi_id: Option<u32>,
+    pub confidence: f32,
+    pub reasoning: String,
+}
+
 impl From<&AnimeWork> for SourceWork {
     fn from(work: &AnimeWork) -> Self {
         SourceWork {

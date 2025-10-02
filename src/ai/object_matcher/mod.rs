@@ -8,6 +8,6 @@ pub mod types;
 
 // Re-export the main API
 #[allow(unused_imports)]
-pub use matcher::match_works_with_ai;
+pub use matcher::{match_works_with_ai, batch_match_works_with_ai, batch_process_searches};
 #[allow(unused_imports)]
 pub use types::*;

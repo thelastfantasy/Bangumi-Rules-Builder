@@ -1,5 +1,5 @@
 use crate::models::{AnimeWork, BangumiResult, BangumiSubject, BangumiInfoboxItem, AiConfig};
-use crate::ai::object_matcher::{SourceWork, CandidateWork, match_works_with_ai};
+use crate::ai::object_matcher::{SourceWork, CandidateWork, batch_process_searches};
 use chrono::{DateTime, FixedOffset, NaiveDate, TimeZone};
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -20,17 +20,19 @@ pub async fn search_bangumi_for_works(
         .progress_chars("█▓▒░")
     );
     pb.enable_steady_tick(std::time::Duration::from_millis(250));
-    pb.set_message("Bangumi搜索中...");
+    pb.set_message("准备批量搜索...");
+
+    // 准备批量搜索任务
+    let mut search_tasks = Vec::new();
+    let mut work_indices = Vec::new();
 
     for (index, work) in works.iter().enumerate() {
         pb.set_message(format!(
-            "搜索作品: {} ({}/{})",
+            "准备搜索任务: {} ({}/{})",
             work.cleaned_title,
             index + 1,
             total_works
         ));
-
-        let mut found = false;
 
         // 构建搜索关键词数组：包含cleaned_title和keywords，并去重
         let mut search_keywords: Vec<&str> = Vec::new();
@@ -41,31 +43,80 @@ pub async fn search_bangumi_for_works(
         search_keywords.sort();
         search_keywords.dedup();
 
-        // 尝试每个关键字
+        // 为每个关键词创建搜索任务
         for keyword in search_keywords {
-            if let Some(subject) =
-                search_bangumi_with_keyword(&client, keyword, &work.air_date).await?
-            {
-                let chinese_name = if !subject.name_cn.is_empty() {
-                    Some(subject.name_cn.clone())
-                } else {
-                    None
-                };
+            // 先搜索Bangumi获取候选作品
+            let subjects = search_bangumi_with_keyword(&client, keyword, &work.air_date).await?;
 
-                let aliases = extract_aliases_from_infobox(&subject.infobox);
-
-                results.push(BangumiResult {
+            if !subjects.is_empty() {
+                // 创建源作品
+                let source_work = SourceWork {
                     original_title: work.original_title.clone(),
                     cleaned_title: work.cleaned_title.clone(),
-                    bangumi_id: Some(subject.id),
-                    chinese_name,
-                    aliases,
-                    air_date: work.air_date,
+                    air_date: work.air_date.map(|d| d.to_string()),
                     keywords: work.keywords.clone(),
-                });
+                };
 
-                found = true;
+                // 创建候选作品列表
+                let candidate_works: Vec<CandidateWork> = subjects
+                    .iter()
+                    .map(|subject| CandidateWork::from(subject))
+                    .collect();
+
+                search_tasks.push((source_work, candidate_works));
+                work_indices.push(index);
+
+                // 每个作品只使用第一个成功的关键词
                 break;
+            }
+        }
+
+        // 更新进度条
+        pb.inc(1);
+    }
+
+    pb.set_message("使用AI进行批量匹配...");
+
+    // 使用批量AI匹配
+    let ai_config = AiConfig::deepseek();
+    let batch_size = 5; // 每批次5个任务
+    let matched_ids = batch_process_searches(&search_tasks, &ai_config, batch_size).await?;
+
+    // 处理匹配结果
+    for (index, work) in works.iter().enumerate() {
+        let mut found = false;
+
+        // 查找该作品的匹配结果
+        for (task_index, &work_index) in work_indices.iter().enumerate() {
+            if work_index == index {
+                if let Some(bangumi_id) = matched_ids[task_index] {
+                    // 找到匹配，创建BangumiResult
+                    // 从候选作品中提取详细信息
+                    let search_task = &search_tasks[task_index];
+                    let candidate_works = &search_task.1;
+
+                    // 查找匹配的候选作品
+                    if let Some(matched_candidate) = candidate_works.iter().find(|c| c.bangumi_id == bangumi_id) {
+                        let chinese_name = if !matched_candidate.chinese_title.is_empty() {
+                            Some(matched_candidate.chinese_title.clone())
+                        } else {
+                            None
+                        };
+
+                        results.push(BangumiResult {
+                            original_title: work.original_title.clone(),
+                            cleaned_title: work.cleaned_title.clone(),
+                            bangumi_id: Some(bangumi_id),
+                            chinese_name,
+                            aliases: matched_candidate.aliases.clone(),
+                            air_date: work.air_date,
+                            keywords: work.keywords.clone(),
+                        });
+
+                        found = true;
+                        break;
+                    }
+                }
             }
         }
 
@@ -80,13 +131,10 @@ pub async fn search_bangumi_for_works(
                 keywords: work.keywords.clone(),
             });
         }
-
-        // 更新进度条
-        pb.inc(1);
     }
 
     // 完成进度条
-    pb.finish_with_message("Bangumi搜索完成");
+    pb.finish_with_message("Bangumi批量搜索完成");
 
     Ok(results)
 }
@@ -95,7 +143,7 @@ pub async fn search_bangumi_with_keyword(
     client: &reqwest::Client,
     keyword: &str,
     air_date: &Option<NaiveDate>,
-) -> Result<Option<BangumiSubject>, Box<dyn std::error::Error>> {
+) -> Result<Vec<BangumiSubject>, Box<dyn std::error::Error>> {
     let url = "https://api.bgm.tv/v0/search/subjects";
 
     // 构建日期范围查询
@@ -163,61 +211,27 @@ pub async fn search_bangumi_with_keyword(
         }
 
         if let Some(data_array) = json_response["data"].as_array() {
-            // 将搜索结果转换为候选作品
-            let candidate_works: Vec<CandidateWork> = data_array
+            // 返回所有搜索结果，让批量处理来处理匹配
+            let subjects: Vec<BangumiSubject> = data_array
                 .iter()
                 .filter_map(|subject_data| {
                     serde_json::from_value::<BangumiSubject>(subject_data.clone()).ok()
                 })
-                .map(|subject| CandidateWork::from(&subject))
                 .collect();
 
-            if candidate_works.is_empty() {
-                if is_problem_work {
-                    println!("🔍 调试：没有有效的候选作品");
-                }
-                return Ok(None);
+            if is_problem_work {
+                println!("🔍 调试：找到 {} 个搜索结果", subjects.len());
             }
 
-            // 创建源作品
-            let source_work = SourceWork {
-                original_title: keyword.to_string(),
-                cleaned_title: keyword.to_string(),
-                air_date: air_date.map(|d| d.to_string()),
-                keywords: vec![keyword.to_string()],
-            };
-
-            // 使用AI进行匹配
-            let ai_config = AiConfig::deepseek();
-            if let Ok(matched_id) = match_works_with_ai(&source_work, &candidate_works, &ai_config).await {
-                if let Some(bangumi_id) = matched_id {
-                    // 找到匹配的作品
-                    if is_problem_work {
-                        println!("🔍 调试：AI匹配成功，作品ID: {}", bangumi_id);
-                    }
-
-                    // 返回匹配的BangumiSubject
-                    for subject_data in data_array {
-                        if let Ok(subject) = serde_json::from_value::<BangumiSubject>(subject_data.clone()) {
-                            if subject.id == bangumi_id {
-                                return Ok(Some(subject));
-                            }
-                        }
-                    }
-                } else if is_problem_work {
-                    println!("🔍 调试：AI未找到匹配作品");
-                }
-            } else if is_problem_work {
-                println!("🔍 调试：AI匹配失败");
-            }
+            return Ok(subjects);
         }
     }
 
     if is_problem_work {
-        println!("🔍 调试：未找到匹配结果");
+        println!("🔍 调试：未找到搜索结果");
     }
 
-    Ok(None)
+    Ok(Vec::new())
 }
 
 fn build_air_date_filter(air_date: &Option<NaiveDate>) -> Option<serde_json::Value> {

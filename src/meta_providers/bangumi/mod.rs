@@ -1,4 +1,5 @@
-use crate::models::{AnimeWork, BangumiResult, BangumiSubject, BangumiInfoboxItem};
+use crate::models::{AnimeWork, BangumiResult, BangumiSubject, BangumiInfoboxItem, AiConfig};
+use crate::ai::object_matcher::{SourceWork, CandidateWork, match_works_with_ai};
 use chrono::{DateTime, FixedOffset, NaiveDate, TimeZone};
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -162,58 +163,52 @@ pub async fn search_bangumi_with_keyword(
         }
 
         if let Some(data_array) = json_response["data"].as_array() {
-            let mut best_match: Option<BangumiSubject> = None;
-            let mut best_score = 0.0;
+            // 将搜索结果转换为候选作品
+            let candidate_works: Vec<CandidateWork> = data_array
+                .iter()
+                .filter_map(|subject_data| {
+                    serde_json::from_value::<BangumiSubject>(subject_data.clone()).ok()
+                })
+                .map(|subject| CandidateWork::from(&subject))
+                .collect();
 
-            for subject_data in data_array {
-                if let Ok(subject) = serde_json::from_value::<BangumiSubject>(subject_data.clone()) {
-                    let mut score = 0.0;
-
-                    // 1. 检查日文名称匹配（权重最高）
-                    if is_title_matching(&subject.name, keyword) {
-                        score += 0.5;
-                    }
-
-                    // 2. 检查中文名称匹配
-                    if !subject.name_cn.is_empty() && is_title_matching(&subject.name_cn, keyword) {
-                        score += 0.3;
-                    }
-
-                    // 3. 检查别名匹配
-                    let aliases = extract_aliases_from_infobox(&subject.infobox);
-                    for alias in &aliases {
-                        if is_title_matching(alias, keyword) {
-                            score += 0.2;
-                            break; // 只加一次分
-                        }
-                    }
-
-                    // 特别调试：输出问题作品的详细评分（在移动subject之前）
-                    if is_problem_work && score > 0.0 {
-                        println!("🔍 调试：匹配评分详情");
-                        println!("   搜索关键字: '{}'", keyword);
-                        println!("   作品ID: {}", subject.id);
-                        println!("   作品名称: '{}'", subject.name);
-                        println!("   中文名称: '{}'", subject.name_cn);
-                        println!("   最终评分: {}", score);
-                    }
-
-                    // 如果分数高于当前最佳匹配，更新最佳匹配
-                    if score > best_score {
-                        best_score = score;
-                        best_match = Some(subject);
-                    }
+            if candidate_works.is_empty() {
+                if is_problem_work {
+                    println!("🔍 调试：没有有效的候选作品");
                 }
+                return Ok(None);
             }
 
-            // 只有当匹配分数达到阈值时才返回结果
-            if best_score >= 0.5 {
-                if is_problem_work {
-                    println!("🔍 调试：匹配成功，最佳评分: {}", best_score);
+            // 创建源作品
+            let source_work = SourceWork {
+                original_title: keyword.to_string(),
+                cleaned_title: keyword.to_string(),
+                air_date: air_date.map(|d| d.to_string()),
+                keywords: vec![keyword.to_string()],
+            };
+
+            // 使用AI进行匹配
+            let ai_config = AiConfig::deepseek();
+            if let Ok(matched_id) = match_works_with_ai(&source_work, &candidate_works, &ai_config).await {
+                if let Some(bangumi_id) = matched_id {
+                    // 找到匹配的作品
+                    if is_problem_work {
+                        println!("🔍 调试：AI匹配成功，作品ID: {}", bangumi_id);
+                    }
+
+                    // 返回匹配的BangumiSubject
+                    for subject_data in data_array {
+                        if let Ok(subject) = serde_json::from_value::<BangumiSubject>(subject_data.clone()) {
+                            if subject.id == bangumi_id {
+                                return Ok(Some(subject));
+                            }
+                        }
+                    }
+                } else if is_problem_work {
+                    println!("🔍 调试：AI未找到匹配作品");
                 }
-                return Ok(best_match);
             } else if is_problem_work {
-                println!("🔍 调试：匹配失败，最佳评分: {} (未达到阈值0.5)", best_score);
+                println!("🔍 调试：AI匹配失败");
             }
         }
     }
@@ -252,56 +247,6 @@ fn convert_to_jst_date(naive_date: NaiveDate) -> DateTime<FixedOffset> {
         .unwrap()
 }
 
-fn is_title_matching(bangumi_title: &str, search_keyword: &str) -> bool {
-    // 改进的名称匹配逻辑
-    let title_lower = bangumi_title.to_lowercase();
-    let keyword_lower = search_keyword.to_lowercase();
-
-    // 1. 如果标题完全包含关键词，认为是强匹配
-    if title_lower.contains(&keyword_lower) {
-        return true;
-    }
-
-    // 2. 如果关键词完全包含标题，也认为是匹配
-    if keyword_lower.contains(&title_lower) {
-        return true;
-    }
-
-    // 3. 对于较长的关键词，检查是否有显著的重叠部分
-    if keyword_lower.len() > 5 {
-        // 计算最长公共子串长度
-        let common_length = longest_common_substring(&title_lower, &keyword_lower);
-        let min_length = std::cmp::min(title_lower.len(), keyword_lower.len());
-
-        // 如果公共子串长度超过较短字符串的60%，认为是匹配
-        if common_length as f32 / min_length as f32 > 0.6 {
-            return true;
-        }
-    }
-
-    false
-}
-
-fn longest_common_substring(s1: &str, s2: &str) -> usize {
-    let s1_chars: Vec<char> = s1.chars().collect();
-    let s2_chars: Vec<char> = s2.chars().collect();
-
-    let mut max_len = 0;
-
-    for i in 0..s1_chars.len() {
-        for j in 0..s2_chars.len() {
-            let mut k = 0;
-            while i + k < s1_chars.len() && j + k < s2_chars.len() && s1_chars[i + k] == s2_chars[j + k] {
-                k += 1;
-            }
-            if k > max_len {
-                max_len = k;
-            }
-        }
-    }
-
-    max_len
-}
 
 pub fn extract_aliases_from_infobox(infobox: &[BangumiInfoboxItem]) -> Vec<String> {
     let mut aliases = Vec::new();

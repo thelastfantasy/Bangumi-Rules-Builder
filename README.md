@@ -83,8 +83,12 @@ src/
 │   └── kansou.rs       # kansou.me网站处理
 ├── ai/                  # AI处理模块
 │   ├── mod.rs
-│   └── deepseek/       # DeepSeek API实现
-│       └── mod.rs
+│   ├── deepseek/       # DeepSeek API实现
+│   │   └── mod.rs
+│   └── object_matcher/ # AI对象匹配系统
+│       ├── mod.rs      # 模块声明和API导出
+│       ├── types.rs    # 数据结构和类型转换
+│       └── matcher.rs  # 核心匹配逻辑实现
 ├── meta_providers/      # 元数据提供者
 │   ├── mod.rs
 │   └── bangumi/        # Bangumi API集成
@@ -123,7 +127,7 @@ README.md              # 项目说明
 
 4. **Bangumi集成** (`meta_providers/bangumi/mod.rs`)
    - 通过Bangumi API搜索官方信息
-   - 使用加权评分系统匹配作品
+   - **智能AI匹配**: 使用DeepSeek AI进行语义匹配，考虑标题相似性、放映时间、关键词匹配
    - 提取中文名称和别名
 
 5. **规则生成** (`rules/q_bittorrent/mod.rs`)
@@ -134,7 +138,11 @@ README.md              # 项目说明
 ### 关键改进
 
 - **模块化架构**: 清晰的职责分离，易于扩展新站点和AI提供商
-- **智能匹配**: 改进的Bangumi匹配算法，提高准确性
+- **AI智能匹配**: 使用DeepSeek AI进行语义匹配，替代传统的score-based算法
+  - 考虑标题语义相似性（包括特殊符号、季度表示差异）
+  - 放映时间的接近程度
+  - 关键词与候选作品标题/别名的匹配度
+  - 是否为同一作品的不同季度
 - **批量处理**: AI API批量处理，优化性能和成本
 - **错误处理**: 完善的错误处理和统计跟踪
 

@@ -1,4 +1,4 @@
-use super::{AiMatchRequest, AiMatchResponse, SourceWork, CandidateWork};
+use super::types::{AiMatchRequest, AiMatchResponse, SourceWork, CandidateWork};
 use crate::models::{AiConfig, AiProvider, AiRequest, AiMessage, AiResponse};
 use std::env;
 
@@ -11,7 +11,7 @@ pub async fn match_works_with_ai(
         AiProvider::DeepSeek => env::var("DEEPSEEK_API_KEY")?,
     };
 
-    let match_request = AiMatchRequest {
+    let _match_request = AiMatchRequest {
         source_work: source_work.clone(),
         candidate_works: candidate_works.to_vec(),
     };

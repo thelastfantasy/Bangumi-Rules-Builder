@@ -1,0 +1,11 @@
+[project]
+name = "qb-rule-editor"
+version = "1.0.0"
+description = "qBittorrent RSS规则编辑器"
+requires-python = ">=3.8"
+
+[project.scripts]
+qb-rule-editor = "qb_rule_editor:main"
+
+[tool.uv.sources]
+# 使用uv的默认源配置

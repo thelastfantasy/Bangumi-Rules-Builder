@@ -1,13 +1,7 @@
 use crate::models::{AnimeWork, BangumiSubject};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SourceWork {
-    pub original_title: String,
-    pub cleaned_title: String,
-    pub air_date: Option<String>,
-    pub keywords: Vec<String>,
-}
+// SourceWork已被移除，直接使用AnimeWork
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CandidateWork {
@@ -21,7 +15,7 @@ pub struct CandidateWork {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AiMatchRequest {
-    pub source_work: SourceWork,
+    pub source_work: AnimeWork,
     pub candidate_works: Vec<CandidateWork>,
 }
 
@@ -34,7 +28,7 @@ pub struct AiMatchResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchMatchRequest {
-    pub source_works: Vec<SourceWork>,
+    pub source_works: Vec<AnimeWork>,
     pub candidate_works_map: Vec<Vec<CandidateWork>>,
 }
 
@@ -51,16 +45,7 @@ pub struct BatchMatchResult {
     pub reasoning: String,
 }
 
-impl From<&AnimeWork> for SourceWork {
-    fn from(work: &AnimeWork) -> Self {
-        SourceWork {
-            original_title: work.original_title.clone(),
-            cleaned_title: work.cleaned_title.clone(),
-            air_date: work.air_date.map(|d| d.to_string()),
-            keywords: work.keywords.clone(),
-        }
-    }
-}
+// SourceWork已被移除，直接使用AnimeWork
 
 impl From<&BangumiSubject> for CandidateWork {
     fn from(subject: &BangumiSubject) -> Self {

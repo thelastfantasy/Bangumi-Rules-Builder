@@ -1,9 +1,9 @@
-use super::types::{AiMatchRequest, AiMatchResponse, SourceWork, CandidateWork, BatchMatchRequest, BatchMatchResponse};
-use crate::models::{AiConfig, AiProvider, AiRequest, AiMessage, AiResponse};
+use super::types::{AiMatchRequest, AiMatchResponse, CandidateWork, BatchMatchRequest, BatchMatchResponse};
+use crate::models::{AnimeWork, AiConfig, AiProvider, AiRequest, AiMessage, AiResponse};
 use std::env;
 
 pub async fn match_works_with_ai(
-    source_work: &SourceWork,
+    source_work: &AnimeWork,
     candidate_works: &[CandidateWork],
     ai_config: &AiConfig,
 ) -> Result<Option<u32>, Box<dyn std::error::Error>> {
@@ -39,7 +39,7 @@ pub async fn match_works_with_ai(
 如果没有完美匹配则返回null。"#,
         source_work.original_title,
         source_work.cleaned_title,
-        source_work.air_date.as_deref().unwrap_or("未知"),
+        source_work.air_date.map(|d| d.to_string()).as_deref().unwrap_or("未知"),
         source_work.keywords,
         format_candidate_works(candidate_works)
     );
@@ -89,7 +89,7 @@ pub async fn match_works_with_ai(
 /// 批量匹配多个源作品与候选作品
 /// 将多个匹配请求合并为一个AI请求，显著减少API调用次数
 pub async fn batch_match_works_with_ai(
-    source_works: &[SourceWork],
+    source_works: &[AnimeWork],
     candidate_works_map: &[Vec<CandidateWork>],
     ai_config: &AiConfig,
 ) -> Result<Vec<Option<u32>>, Box<dyn std::error::Error>> {
@@ -190,19 +190,37 @@ pub async fn batch_match_works_with_ai(
 
 /// 批量处理多个搜索任务，自动分批处理以避免token超限
 pub async fn batch_process_searches(
-    search_tasks: &[(SourceWork, Vec<CandidateWork>)],
+    search_tasks: &[(AnimeWork, Vec<CandidateWork>)],
     ai_config: &AiConfig,
     batch_size: usize,
+    progress_bar: Option<&indicatif::ProgressBar>,
 ) -> Result<Vec<Option<u32>>, Box<dyn std::error::Error>> {
     let mut all_results = Vec::new();
 
+    // 输出开始智能匹配的文本
+    println!("🚀 开始智能匹配，共 {} 个搜索任务，分批大小: {}", search_tasks.len(), batch_size);
+
     // 分批处理
-    for chunk in search_tasks.chunks(batch_size) {
-        let source_works: Vec<SourceWork> = chunk.iter().map(|(source, _)| source.clone()).collect();
+    for (batch_index, chunk) in search_tasks.chunks(batch_size).enumerate() {
+        if let Some(pb) = progress_bar {
+            pb.set_message(format!(
+                "处理批次 {}/{} ({}个搜索任务)",
+                batch_index + 1,
+                (search_tasks.len() + batch_size - 1) / batch_size,
+                chunk.len()
+            ));
+        }
+
+        let source_works: Vec<AnimeWork> = chunk.iter().map(|(source, _)| source.clone()).collect();
         let candidate_works_map: Vec<Vec<CandidateWork>> = chunk.iter().map(|(_, candidates)| candidates.clone()).collect();
 
         let batch_results = batch_match_works_with_ai(&source_works, &candidate_works_map, ai_config).await?;
         all_results.extend(batch_results);
+
+        // 更新进度条
+        if let Some(pb) = progress_bar {
+            pb.inc(chunk.len() as u64);
+        }
 
         // 添加延迟以避免API限制
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -211,7 +229,7 @@ pub async fn batch_process_searches(
     Ok(all_results)
 }
 
-fn format_batch_match_tasks(source_works: &[SourceWork], candidate_works_map: &[Vec<CandidateWork>]) -> String {
+fn format_batch_match_tasks(source_works: &[AnimeWork], candidate_works_map: &[Vec<CandidateWork>]) -> String {
     source_works
         .iter()
         .enumerate()
@@ -222,7 +240,7 @@ fn format_batch_match_tasks(source_works: &[SourceWork], candidate_works_map: &[
                 i,
                 source_work.original_title,
                 source_work.cleaned_title,
-                source_work.air_date.as_deref().unwrap_or("未知"),
+                source_work.air_date.map(|d| d.to_string()).as_deref().unwrap_or("未知"),
                 source_work.keywords,
                 format_candidate_works(candidate_works),
                 i

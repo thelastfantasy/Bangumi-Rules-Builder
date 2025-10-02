@@ -1,5 +1,5 @@
 use crate::models::{AnimeWork, BangumiResult, BangumiSubject, BangumiInfoboxItem, AiConfig};
-use crate::ai::object_matcher::{SourceWork, CandidateWork, batch_process_searches};
+use crate::ai::object_matcher::{CandidateWork, batch_process_searches};
 use chrono::{DateTime, FixedOffset, NaiveDate, TimeZone};
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -9,26 +9,26 @@ pub async fn search_bangumi_for_works(
     let client = reqwest::Client::new();
     let mut results = Vec::new();
 
-    // 创建进度条
+    // 创建批量搜索进度条
     let total_works = works.len();
-    let pb = ProgressBar::new(total_works as u64);
-    pb.set_style(
+    let search_pb = ProgressBar::new(total_works as u64);
+    search_pb.set_style(
         ProgressStyle::with_template(
             "{spinner:.yellow} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({percent}%) {msg}"
         )
         .unwrap()
         .progress_chars("█▓▒░")
     );
-    pb.enable_steady_tick(std::time::Duration::from_millis(250));
-    pb.set_message("准备批量搜索...");
+    search_pb.enable_steady_tick(std::time::Duration::from_millis(250));
+    search_pb.set_message("Bangumi批量搜索中...");
 
     // 准备批量搜索任务
     let mut search_tasks = Vec::new();
     let mut work_indices = Vec::new();
 
     for (index, work) in works.iter().enumerate() {
-        pb.set_message(format!(
-            "准备搜索任务: {} ({}/{})",
+        search_pb.set_message(format!(
+            "搜索作品: {} ({}/{})",
             work.cleaned_title,
             index + 1,
             total_works
@@ -43,44 +43,54 @@ pub async fn search_bangumi_for_works(
         search_keywords.sort();
         search_keywords.dedup();
 
-        // 为每个关键词创建搜索任务
+        // 收集所有候选作品，按Bangumi ID去重
+        let mut all_candidate_works: Vec<CandidateWork> = Vec::new();
+
         for keyword in search_keywords {
             // 先搜索Bangumi获取候选作品
             let subjects = search_bangumi_with_keyword(&client, keyword, &work.air_date).await?;
 
             if !subjects.is_empty() {
-                // 创建源作品
-                let source_work = SourceWork {
-                    original_title: work.original_title.clone(),
-                    cleaned_title: work.cleaned_title.clone(),
-                    air_date: work.air_date.map(|d| d.to_string()),
-                    keywords: work.keywords.clone(),
-                };
-
-                // 创建候选作品列表
-                let candidate_works: Vec<CandidateWork> = subjects
-                    .iter()
-                    .map(|subject| CandidateWork::from(subject))
-                    .collect();
-
-                search_tasks.push((source_work, candidate_works));
-                work_indices.push(index);
-
-                // 每个作品只使用第一个成功的关键词
-                break;
+                // 添加候选作品到集合中
+                for subject in subjects {
+                    let candidate = CandidateWork::from(&subject);
+                    // 检查是否已存在相同ID的候选作品
+                    if !all_candidate_works.iter().any(|c| c.bangumi_id == candidate.bangumi_id) {
+                        all_candidate_works.push(candidate);
+                    }
+                }
             }
         }
 
-        // 更新进度条
-        pb.inc(1);
+        // 如果有候选作品，创建一个搜索任务
+        if !all_candidate_works.is_empty() {
+            search_tasks.push((work.clone(), all_candidate_works));
+            work_indices.push(index);
+        }
+
+        // 更新搜索进度条
+        search_pb.inc(1);
     }
 
-    pb.set_message("使用AI进行批量匹配...");
+    // 完成搜索进度条
+    search_pb.finish_with_message("Bangumi搜索完成");
+
+    // 创建AI批量匹配进度条
+    let ai_pb = ProgressBar::new(search_tasks.len() as u64);
+    ai_pb.set_style(
+        ProgressStyle::with_template(
+            "{spinner:.green} [{elapsed_precise}] [{bar:40.magenta/cyan}] {pos}/{len} ({percent}%) {msg}"
+        )
+        .unwrap()
+        .progress_chars("█▓▒░")
+    );
+    ai_pb.enable_steady_tick(std::time::Duration::from_millis(250));
+    ai_pb.set_message("AI批量匹配中...");
 
     // 使用批量AI匹配
     let ai_config = AiConfig::deepseek();
     let batch_size = 5; // 每批次5个任务
-    let matched_ids = batch_process_searches(&search_tasks, &ai_config, batch_size).await?;
+    let matched_ids = batch_process_searches(&search_tasks, &ai_config, batch_size, Some(&ai_pb)).await?;
 
     // 处理匹配结果
     for (index, work) in works.iter().enumerate() {
@@ -134,7 +144,7 @@ pub async fn search_bangumi_for_works(
     }
 
     // 完成进度条
-    pb.finish_with_message("Bangumi批量搜索完成");
+    ai_pb.finish_with_message("AI批量匹配完成");
 
     Ok(results)
 }

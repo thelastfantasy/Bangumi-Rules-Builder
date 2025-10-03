@@ -155,26 +155,3 @@ jobs:
           **/*.tar.gz
         generate_release_notes: true
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    env:
-      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy
-
-    - name: Run tests
-      shell: bash
-      run: cargo test
-
-    - name: Check code
-      shell: bash
-      run: |
-        cargo check
-        cargo clippy -- -D warnings

@@ -165,6 +165,8 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    env:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4

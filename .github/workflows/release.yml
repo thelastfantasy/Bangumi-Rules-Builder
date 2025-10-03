@@ -106,6 +106,28 @@ jobs:
         cp run_editor.ps1 dist/
         cp EDITOR_README.md dist/
 
+    - name: Build Python executable
+      shell: bash
+      run: |
+        # Install Python and PyInstaller
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+
+        # Build executable with appropriate options for each platform
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          # Windows: no console window
+          pyinstaller --onefile --noconsole --name "qb-rule-editor" qb_rule_editor.py
+          cp dist/qb-rule-editor.exe dist/
+        elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          # Linux: build executable
+          pyinstaller --onefile --name "qb-rule-editor" qb_rule_editor.py
+          cp dist/qb-rule-editor dist/
+        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          # macOS: build executable
+          pyinstaller --onefile --name "qb-rule-editor" qb_rule_editor.py
+          cp dist/qb-rule-editor dist/
+        fi
+
     - name: Create release archive
       shell: bash
       run: |

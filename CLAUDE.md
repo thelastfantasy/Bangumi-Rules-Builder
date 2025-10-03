@@ -225,3 +225,25 @@ debug_date_matching.rs  # Date debugging tools
 - Enable debug prints in date matching functions
 - Check API request/response logging
 - Verify table extraction with intermediate HTML dumps
+
+## GitHub Actions and Release Workflow
+
+### Python Executable Build
+- **PyInstaller Configuration**: Used to build standalone Python GUI executables
+- **Platform-specific Options**:
+  - Windows: `--noconsole` flag to hide command line window
+  - Linux/macOS: Standard executable without console window
+- **Common Issues**:
+  - Linux build failure due to redundant file copy operations
+  - Ensure PyInstaller output directory structure is correct
+
+### GitHub Actions Debugging
+- **Error Investigation**: Use `gh run view --log-failed --job=<job-id>` to examine failed jobs
+- **Log Analysis**: Always check the last 20 lines first to avoid overwhelming output
+  ```bash
+  gh run view --log-failed --job=51864243752 | tail -20
+  ```
+- **Common Build Issues**:
+  - File copy conflicts (source and destination are the same)
+  - PyInstaller dependency resolution
+  - Cross-platform executable naming conventions

@@ -1,4 +1,4 @@
-use super::types::{AiMatchRequest, AiMatchResponse, CandidateWork, BatchMatchRequest, BatchMatchResponse};
+use super::types::{AiMatchResponse, CandidateWork, BatchMatchResponse};
 use crate::models::{AnimeWork, AiConfig, AiProvider, AiRequest, AiMessage, AiResponse};
 use std::env;
 
@@ -11,10 +11,6 @@ pub async fn match_works_with_ai(
         AiProvider::DeepSeek => env::var("DEEPSEEK_API_KEY")?,
     };
 
-    let _match_request = AiMatchRequest {
-        source_work: source_work.clone(),
-        candidate_works: candidate_works.to_vec(),
-    };
 
     let prompt = format!(
         r#"请从以下候选作品中找到与源作品最匹配的项：
@@ -101,10 +97,6 @@ pub async fn batch_match_works_with_ai(
         AiProvider::DeepSeek => env::var("DEEPSEEK_API_KEY")?,
     };
 
-    let _batch_request = BatchMatchRequest {
-        source_works: source_works.to_vec(),
-        candidate_works_map: candidate_works_map.to_vec(),
-    };
 
     let prompt = format!(
         r#"请为以下多个独立的匹配任务找到最合适的Bangumi作品。每个任务都是完全独立的，请不要混淆不同任务之间的信息。

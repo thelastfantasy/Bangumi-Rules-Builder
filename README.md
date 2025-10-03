@@ -1,106 +1,98 @@
 # Bangumi Rules Builder
 
-一个智能的动漫下载规则生成器，通过网页抓取、AI处理和Bangumi API集成，自动为qBittorrent生成RSS下载规则。
+一个智能的 Rust 应用程序，通过网页抓取、AI 处理和 Bangumi API 集成，自动为动漫季度生成 qBittorrent RSS 下载规则。
 
-## 功能特性
+## 功能特点
 
-- 🕷️ **网页抓取**: 自动从kansou.me等网站提取动漫信息
-- 🤖 **AI处理**: 使用DeepSeek API清理标题并生成搜索关键词
-- 📚 **Bangumi集成**: 通过Bangumi API获取官方动漫信息
-- 📥 **规则生成**: 为qBittorrent创建智能RSS下载规则
-- 🌍 **多语言支持**: 支持日文、中文、英文标题变体
-- 📊 **统计报告**: 提供详细的处理统计和API使用情况
-- 🔧 **模块化架构**: 清晰的模块分离，易于扩展和维护
+### 🎯 核心功能
+- **智能网页抓取**：从 kansou.me 等网站提取动漫信息
+- **AI 增强处理**：使用 AI API 清理标题并生成搜索关键词
+- **Bangumi 集成**：通过 Bangumi API 搜索官方动漫信息
+- **自动规则生成**：创建 qBittorrent RSS 下载规则
+- **跨平台 GUI 编辑器**：Python tkinter 界面编辑生成的规则
+
+### 🚀 技术特性
+- **多语言支持**：日语、中文、英文标题处理
+- **智能匹配**：基于权重评分的动漫匹配算法
+- **批量处理**：AI API 批量处理以管理使用限制
+- **缓存机制**：避免重复 API 调用
+- **错误处理**：全面的错误处理和优雅降级
 
 ## 快速开始
 
-### 环境要求
-
+### 系统要求
 - Rust 1.70+
-- DeepSeek API密钥
+- Python 3.8+ (用于 GUI 编辑器)
+- 网络连接 (用于 API 调用)
 
 ### 安装
 
+#### 方法 1：从源码构建
 ```bash
-# 克隆项目
-git clone <repository-url>
-cd smart_bangumi_qb_rule_generator
+# 克隆仓库
+git clone https://github.com/your-username/bangumi-rules-builder.git
+cd bangumi-rules-builder
 
 # 构建项目
 cargo build --release
-```
 
-### 配置
-
-1. 设置环境变量：
-```bash
-export DEEPSEEK_API_KEY="your_deepseek_api_key_here"
-```
-
-2. 编辑 `tasks.json`：
-```json
-{
-  "description": "2025年10月新番",
-  "site": "kansou",
-  "root_path": "E:\\Anime\\新番"
-}
-```
-
-#### tasks.json 配置说明
-
-- **description**: 描述文本，用于让DeepSeek AI识别对应的动漫季。格式灵活，只要能准确描述目标动漫季即可，例如：
-  - "2025年10月新番"
-  - "2025年秋季动画"
-  - "2025年10月动漫列表"
-  - "2025年10月番剧"
-
-- **site**: 目前仅支持 "kansou"（kansou.me网站），未来计划支持更多站点：
-  - **kansou** (当前支持) - 从kansou.me抓取动漫信息
-  - **myanimelist** (计划中) - 从MyAnimeList获取数据
-  - **modelscope** (计划中) - 使用ModelScope API
-
-- **root_path**: 下载文件的根目录路径，程序会自动创建季节和作品名称的子文件夹
-
-### 运行
-
-```bash
+# 运行程序
 cargo run
 ```
 
-## 输出文件
+#### 方法 2：使用预编译二进制
+从 [Releases](https://github.com/your-username/bangumi-rules-builder/releases) 页面下载对应平台的二进制文件。
 
-- `qb_download_rules.json`: 生成的qBittorrent RSS规则
-- `bangumi_results.json`: 缓存的Bangumi API结果
+### 配置
+
+1. **设置 API 密钥**：
+   ```bash
+   export DEEPSEEK_API_KEY="your-deepseek-api-key"
+   ```
+
+2. **编辑任务配置** (`tasks.json`)：
+   ```json
+   {
+     "description": "2025年10月新番",
+     "site": "kansou",
+     "root_path": "E:\\Anime\\新番"
+   }
+   ```
+
+3. **运行程序**：
+   ```bash
+   cargo run
+   ```
+
+### 使用 GUI 编辑器
+
+```bash
+# 使用 Python 运行
+python qb_rule_editor.py
+
+# 或使用启动脚本 (Windows)
+run_editor.bat
+run_editor.ps1
+```
 
 ## 项目结构
 
 ```
 src/
-├── main.rs              # 主应用程序逻辑和入口点
-├── models.rs            # 数据模型定义
-├── sites/               # 网站抓取模块
-│   ├── mod.rs
-│   └── kansou.rs       # kansou.me网站处理
-├── ai/                  # AI处理模块
-│   ├── mod.rs
-│   └── deepseek/       # DeepSeek API实现
-│       └── mod.rs
-├── meta_providers/      # 元数据提供者
-│   ├── mod.rs
-│   └── bangumi/        # Bangumi API集成
-│       └── mod.rs
-├── rules/               # 规则生成模块
-│   ├── mod.rs
-│   └── q_bittorrent/   # qBittorrent规则生成
-│       └── mod.rs
-└── utils.rs             # 工具函数
+├── main.rs              # 主应用程序逻辑
+├── ai/
+│   └── object_matcher/  # AI 对象匹配系统
+└── meta_providers/
+    └── bangumi/         # Bangumi API 集成
 
-Cargo.toml              # 项目依赖配置
-tasks.json              # 处理配置
-qb_download_rules.json  # 生成的下载规则
-bangumi_results.json    # 缓存的Bangumi结果
-CLAUDE.md              # 详细开发文档
-README.md              # 项目说明
+# 配置文件
+tasks.json               # 处理配置
+.gitignore              # Git 忽略规则
+
+# 工具脚本
+qb_rule_editor.py       # Python GUI 编辑器
+run_editor.bat          # Windows 启动脚本
+run_editor.ps1          # PowerShell 启动脚本
 ```
 
 ## 工作流程
@@ -123,7 +115,7 @@ README.md              # 项目说明
 
 4. **Bangumi集成** (`meta_providers/bangumi/mod.rs`)
    - 通过Bangumi API搜索官方信息
-   - 使用加权评分系统匹配作品
+   - **智能AI匹配**: 使用DeepSeek AI进行语义匹配，考虑标题相似性、放映时间、关键词匹配
    - 提取中文名称和别名
 
 5. **规则生成** (`rules/q_bittorrent/mod.rs`)
@@ -134,7 +126,11 @@ README.md              # 项目说明
 ### 关键改进
 
 - **模块化架构**: 清晰的职责分离，易于扩展新站点和AI提供商
-- **智能匹配**: 改进的Bangumi匹配算法，提高准确性
+- **AI智能匹配**: 使用DeepSeek AI进行语义匹配，替代传统的score-based算法
+  - 考虑标题语义相似性（包括特殊符号、季度表示差异）
+  - 放映时间的接近程度
+  - 关键词与候选作品标题/别名的匹配度
+  - 是否为同一作品的不同季度
 - **批量处理**: AI API批量处理，优化性能和成本
 - **错误处理**: 完善的错误处理和统计跟踪
 

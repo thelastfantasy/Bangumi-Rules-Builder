@@ -5,6 +5,8 @@
 # Generated files
 rules.json
 bangumi_results.json
+qb_download_rules.json
+qb_download_rules_mod.json
 
 # Environment files
 .env

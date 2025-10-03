@@ -1,4 +1,4 @@
-use crate::models::{AnimeWork, BangumiResult, BangumiSubject, BangumiInfoboxItem, AiConfig};
+use crate::models::{AnimeWork, BangumiResult, BangumiSubject, AiConfig};
 use crate::ai::object_matcher::{CandidateWork, batch_process_searches};
 use chrono::{DateTime, FixedOffset, NaiveDate, TimeZone};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -98,34 +98,34 @@ pub async fn search_bangumi_for_works(
 
         // 查找该作品的匹配结果
         for (task_index, &work_index) in work_indices.iter().enumerate() {
-            if work_index == index {
-                if let Some(bangumi_id) = matched_ids[task_index] {
-                    // 找到匹配，创建BangumiResult
-                    // 从候选作品中提取详细信息
-                    let search_task = &search_tasks[task_index];
-                    let candidate_works = &search_task.1;
+            if work_index == index
+                && let Some(bangumi_id) = matched_ids[task_index]
+            {
+                // 找到匹配，创建BangumiResult
+                // 从候选作品中提取详细信息
+                let search_task = &search_tasks[task_index];
+                let candidate_works = &search_task.1;
 
-                    // 查找匹配的候选作品
-                    if let Some(matched_candidate) = candidate_works.iter().find(|c| c.bangumi_id == bangumi_id) {
-                        let chinese_name = if !matched_candidate.chinese_title.is_empty() {
-                            Some(matched_candidate.chinese_title.clone())
-                        } else {
-                            None
-                        };
+                // 查找匹配的候选作品
+                if let Some(matched_candidate) = candidate_works.iter().find(|c| c.bangumi_id == bangumi_id) {
+                    let chinese_name = if !matched_candidate.chinese_title.is_empty() {
+                        Some(matched_candidate.chinese_title.clone())
+                    } else {
+                        None
+                    };
 
-                        results.push(BangumiResult {
-                            original_title: work.original_title.clone(),
-                            cleaned_title: work.cleaned_title.clone(),
-                            bangumi_id: Some(bangumi_id),
-                            chinese_name,
-                            aliases: matched_candidate.aliases.clone(),
-                            air_date: work.air_date,
-                            keywords: work.keywords.clone(),
-                        });
+                    results.push(BangumiResult {
+                        original_title: work.original_title.clone(),
+                        cleaned_title: work.cleaned_title.clone(),
+                        bangumi_id: Some(bangumi_id),
+                        chinese_name,
+                        aliases: matched_candidate.aliases.clone(),
+                        air_date: work.air_date,
+                        keywords: work.keywords.clone(),
+                    });
 
-                        found = true;
-                        break;
-                    }
+                    found = true;
+                    break;
                 }
             }
         }
@@ -174,7 +174,7 @@ pub async fn search_bangumi_with_keyword(
     }
 
     // 特别调试：检查是否在搜索问题作品
-    let problem_keywords = vec![
+    let problem_keywords = [
         "破産富豪",
         "ある日、お姫様になってしまった件について",
         "羅小黒戦記",
@@ -208,15 +208,15 @@ pub async fn search_bangumi_with_keyword(
         let json_response: serde_json::Value = response.json().await?;
 
         // 调试输出搜索结果（仅针对问题作品）
-        if is_problem_work {
-            if let Some(data_array) = json_response["data"].as_array() {
-                println!("   找到 {} 个搜索结果", data_array.len());
-                if !data_array.is_empty() {
-                    println!(
-                        "   第一个结果: {}",
-                        serde_json::to_string_pretty(&data_array[0]).unwrap()
-                    );
-                }
+        if is_problem_work
+            && let Some(data_array) = json_response["data"].as_array()
+        {
+            println!("   找到 {} 个搜索结果", data_array.len());
+            if !data_array.is_empty() {
+                println!(
+                    "   第一个结果: {}",
+                    serde_json::to_string_pretty(&data_array[0]).unwrap()
+                );
             }
         }
 
@@ -271,8 +271,7 @@ fn convert_to_jst_date(naive_date: NaiveDate) -> DateTime<FixedOffset> {
         .unwrap()
 }
 
-
-pub fn extract_aliases_from_infobox(infobox: &[BangumiInfoboxItem]) -> Vec<String> {
+pub(crate) fn extract_aliases_from_infobox(infobox: &[crate::models::BangumiInfoboxItem]) -> Vec<String> {
     let mut aliases = Vec::new();
 
     for item in infobox {
@@ -283,7 +282,6 @@ pub fn extract_aliases_from_infobox(infobox: &[BangumiInfoboxItem]) -> Vec<Strin
                 }
                 serde_json::Value::Array(arr) => {
                     for val in arr {
-                        // Handle both string values and object values with "v" key
                         match val {
                             serde_json::Value::String(s) => {
                                 aliases.push(s.clone());
@@ -304,3 +302,5 @@ pub fn extract_aliases_from_infobox(infobox: &[BangumiInfoboxItem]) -> Vec<Strin
 
     aliases
 }
+
+

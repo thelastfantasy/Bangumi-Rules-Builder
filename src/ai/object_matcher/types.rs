@@ -1,4 +1,4 @@
-use crate::models::{AnimeWork, BangumiSubject};
+use crate::models::BangumiSubject;
 use serde::{Deserialize, Serialize};
 
 // SourceWork已被移除，直接使用AnimeWork
@@ -13,24 +13,6 @@ pub struct CandidateWork {
     pub score: Option<f32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AiMatchRequest {
-    pub source_work: AnimeWork,
-    pub candidate_works: Vec<CandidateWork>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AiMatchResponse {
-    pub matched_bangumi_id: Option<u32>,
-    pub confidence: f32,
-    pub reasoning: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BatchMatchRequest {
-    pub source_works: Vec<AnimeWork>,
-    pub candidate_works_map: Vec<Vec<CandidateWork>>,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchMatchResponse {
@@ -51,7 +33,7 @@ impl From<&BangumiSubject> for CandidateWork {
     fn from(subject: &BangumiSubject) -> Self {
         // 从infobox中提取放映时间和别名
         let air_date = extract_air_date_from_infobox(&subject.infobox);
-        let aliases = extract_aliases_from_infobox(&subject.infobox);
+        let aliases = crate::meta_providers::bangumi::extract_aliases_from_infobox(&subject.infobox);
 
         CandidateWork {
             bangumi_id: subject.id,
@@ -66,49 +48,12 @@ impl From<&BangumiSubject> for CandidateWork {
 
 fn extract_air_date_from_infobox(infobox: &[crate::models::BangumiInfoboxItem]) -> Option<chrono::NaiveDate> {
     for item in infobox {
-        if item.key == "放送开始" || item.key == "开始" {
-            match &item.value {
-                serde_json::Value::String(date_str) => {
-                    // 尝试解析日期格式
-                    if let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                        return Some(date);
-                    }
-                }
-                _ => {}
-            }
+        if (item.key == "放送开始" || item.key == "开始")
+            && let serde_json::Value::String(date_str) = &item.value
+            && let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+        {
+            return Some(date);
         }
     }
     None
-}
-
-fn extract_aliases_from_infobox(infobox: &[crate::models::BangumiInfoboxItem]) -> Vec<String> {
-    let mut aliases = Vec::new();
-
-    for item in infobox {
-        if item.key == "别名" || item.key == "中文名" || item.key == "译名" {
-            match &item.value {
-                serde_json::Value::String(s) => {
-                    aliases.push(s.clone());
-                }
-                serde_json::Value::Array(arr) => {
-                    for val in arr {
-                        match val {
-                            serde_json::Value::String(s) => {
-                                aliases.push(s.clone());
-                            }
-                            serde_json::Value::Object(obj) => {
-                                if let Some(serde_json::Value::String(s)) = obj.get("v") {
-                                    aliases.push(s.clone());
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-
-    aliases
 }

@@ -63,8 +63,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Install 7zip for Windows
-          choco install 7zip -y
+          # Install 7zip for Windows with specific version
+          choco install 7zip --version 23.01 -y
         fi
 
     - name: Build release binary
@@ -115,7 +115,12 @@ jobs:
 
         # Create archive
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          7z a ${{ matrix.artifact_name }}.zip release-package/*
+          # Try 7zip first, fallback to PowerShell Compress-Archive
+          if command -v 7z &> /dev/null; then
+            7z a ${{ matrix.artifact_name }}.zip release-package/*
+          else
+            powershell -Command "Compress-Archive -Path 'release-package/*' -DestinationPath '${{ matrix.artifact_name }}.zip' -Force"
+          fi
         else
           tar czf ${{ matrix.artifact_name }}.tar.gz -C release-package .
         fi

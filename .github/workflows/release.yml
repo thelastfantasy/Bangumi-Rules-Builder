@@ -89,10 +89,10 @@ jobs:
         # Copy Python editor files
         mkdir -p dist
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          copy qb_rule_editor.py dist/
-          copy run_editor.bat dist/
-          copy run_editor.ps1 dist/
-          copy EDITOR_README.md dist/
+          cp qb_rule_editor.py dist/
+          cp run_editor.bat dist/
+          cp run_editor.ps1 dist/
+          cp EDITOR_README.md dist/
         else
           cp qb_rule_editor.py dist/
           cp run_editor.bat dist/
@@ -107,12 +107,12 @@ jobs:
 
         # Copy binary
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          copy target/${{ matrix.target }}/release/bangumi-rules-builder${{ matrix.extension }} release-package/
+          cp target/${{ matrix.target }}/release/bangumi-rules-builder${{ matrix.extension }} release-package/
           # Copy Python editor files
-          xcopy dist\* release-package\ /E /I /Y
+          cp -r dist/* release-package/
           # Copy configuration templates
-          copy tasks.json release-package/tasks.json.example
-          copy README.md release-package/
+          cp tasks.json release-package/tasks.json.example
+          cp README.md release-package/
         else
           cp target/${{ matrix.target }}/release/bangumi-rules-builder${{ matrix.extension }} release-package/
           # Copy Python editor files

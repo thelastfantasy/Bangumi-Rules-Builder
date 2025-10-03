@@ -92,17 +92,17 @@ pub async fn match_and_process_with_ai<'a>(
 
         // 提取JSON内容，处理markdown代码块
         let json_content = if content.starts_with("```json") && content.ends_with("```") {
-            &content[7..content.len() - 3].trim()
+            content[7..content.len() - 3].trim()
         } else if content.starts_with("```") && content.ends_with("```") {
-            &content[3..content.len() - 3].trim()
+            content[3..content.len() - 3].trim()
         } else {
             content
         };
 
-        if let Ok(processed_data) = serde_json::from_str::<serde_json::Value>(json_content) {
-            if let Some(table_index) = processed_data["table_index"].as_u64() {
-                selected_table_index = table_index as usize;
-            }
+        if let Ok(processed_data) = serde_json::from_str::<serde_json::Value>(json_content)
+            && let Some(table_index) = processed_data["table_index"].as_u64()
+        {
+            selected_table_index = table_index as usize;
         }
     }
 
@@ -194,43 +194,43 @@ pub async fn match_and_process_with_ai<'a>(
 
             // 提取JSON内容，处理markdown代码块
             let json_content = if content.starts_with("```json") && content.ends_with("```") {
-                &content[7..content.len() - 3].trim()
+                content[7..content.len() - 3].trim()
             } else if content.starts_with("```") && content.ends_with("```") {
-                &content[3..content.len() - 3].trim()
+                content[3..content.len() - 3].trim()
             } else {
                 content
             };
 
             // 尝试从JSON中提取处理后的信息
-            if let Ok(processed_data) = serde_json::from_str::<serde_json::Value>(json_content) {
-                if let Some(works_array) = processed_data["works"].as_array() {
-                    for (i, work_data) in works_array.iter().enumerate() {
-                        let batch_offset = batch_index * batch_size + i;
-                        if batch_offset < raw_works.len() {
-                            if let (
-                                Some(original_title),
-                                Some(cleaned_title),
-                                Some(keywords_array),
-                            ) = (
-                                work_data["original_title"].as_str(),
-                                work_data["cleaned_title"].as_str(),
-                                work_data["keywords"].as_array(),
-                            ) {
-                                let keywords: Vec<String> = keywords_array
-                                    .iter()
-                                    .filter_map(|k| k.as_str().map(|s| s.to_string()))
-                                    .collect();
+            if let Ok(processed_data) = serde_json::from_str::<serde_json::Value>(json_content)
+                && let Some(works_array) = processed_data["works"].as_array()
+            {
+                for (i, work_data) in works_array.iter().enumerate() {
+                    let batch_offset = batch_index * batch_size + i;
+                    if batch_offset < raw_works.len()
+                        && let (
+                            Some(original_title),
+                            Some(cleaned_title),
+                            Some(keywords_array),
+                        ) = (
+                            work_data["original_title"].as_str(),
+                            work_data["cleaned_title"].as_str(),
+                            work_data["keywords"].as_array(),
+                        )
+                    {
+                        let keywords: Vec<String> = keywords_array
+                            .iter()
+                            .filter_map(|k| k.as_str().map(|s| s.to_string()))
+                            .collect();
 
-                                // 保持原有的air_date
-                                let original_work = &raw_works[batch_offset];
-                                processed_works.push(AnimeWork {
-                                    original_title: original_title.to_string(),
-                                    cleaned_title: cleaned_title.to_string(),
-                                    air_date: original_work.air_date.clone(),
-                                    keywords,
-                                });
-                            }
-                        }
+                        // 保持原有的air_date
+                        let original_work = &raw_works[batch_offset];
+                        processed_works.push(AnimeWork {
+                            original_title: original_title.to_string(),
+                            cleaned_title: cleaned_title.to_string(),
+                            air_date: original_work.air_date,
+                            keywords,
+                        });
                     }
                 }
             }
@@ -254,9 +254,9 @@ pub async fn match_and_process_with_ai<'a>(
 
     stats.works_processed_by_ai = processed_works.len();
     let processed_works_clone = processed_works.clone();
-    return Ok((
+    Ok((
         Some((matched_table, processed_works)),
         processed_works_clone,
         stats,
-    ));
+    ))
 }

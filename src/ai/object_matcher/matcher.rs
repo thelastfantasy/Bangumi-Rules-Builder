@@ -1,86 +1,7 @@
-use super::types::{AiMatchResponse, CandidateWork, BatchMatchResponse};
+use super::types::{CandidateWork, BatchMatchResponse};
 use crate::models::{AnimeWork, AiConfig, AiProvider, AiRequest, AiMessage, AiResponse};
 use std::env;
 
-pub async fn match_works_with_ai(
-    source_work: &AnimeWork,
-    candidate_works: &[CandidateWork],
-    ai_config: &AiConfig,
-) -> Result<Option<u32>, Box<dyn std::error::Error>> {
-    let api_key = match ai_config.provider {
-        AiProvider::DeepSeek => env::var("DEEPSEEK_API_KEY")?,
-    };
-
-
-    let prompt = format!(
-        r#"请从以下候选作品中找到与源作品最匹配的项：
-
-源作品：
-- 原标题: {}
-- 清理标题: {}
-- 放映时间: {}
-- 关键词: {:?}
-
-候选作品：
-{}
-
-请考虑：
-- 标题语义相似性（包括特殊符号、季度表示差异）
-- 放映时间的接近程度
-- 关键词与候选作品标题/别名的匹配度
-- 是否为同一作品的不同季度
-
-请返回JSON格式：{{"matched_bangumi_id": <ID或null>, "confidence": <0-1的置信度>, "reasoning": "匹配理由"}}
-
-如果没有完美匹配则返回null。"#,
-        source_work.original_title,
-        source_work.cleaned_title,
-        source_work.air_date.map(|d| d.to_string()).as_deref().unwrap_or("未知"),
-        source_work.keywords,
-        format_candidate_works(candidate_works)
-    );
-
-    let request = AiRequest {
-        model: ai_config.model.clone(),
-        messages: vec![AiMessage {
-            role: "user".to_string(),
-            content: prompt,
-        }],
-    };
-
-    let client = reqwest::Client::new();
-    let response = client
-        .post("https://api.deepseek.com/chat/completions")
-        .header("Authorization", format!("Bearer {}", api_key))
-        .header("Content-Type", "application/json")
-        .json(&request)
-        .send()
-        .await?;
-
-    let api_response: AiResponse = response.json().await?;
-
-    if let Some(choice) = api_response.choices.first() {
-        let content = choice.message.content.trim();
-
-        // 提取JSON内容，处理markdown代码块
-        let json_content = if content.starts_with("```json") && content.ends_with("```") {
-            &content[7..content.len() - 3].trim()
-        } else if content.starts_with("```") && content.ends_with("```") {
-            &content[3..content.len() - 3].trim()
-        } else {
-            content
-        };
-
-        if let Ok(match_response) = serde_json::from_str::<AiMatchResponse>(json_content) {
-            // 如果置信度高于0.7，认为匹配成功
-            if match_response.confidence > 0.7 {
-                return Ok(match_response.matched_bangumi_id);
-            }
-        }
-    }
-
-    Ok(None)
-}
 
 /// 批量匹配多个源作品与候选作品
 /// 将多个匹配请求合并为一个AI请求，显著减少API调用次数
@@ -157,9 +78,9 @@ pub async fn batch_match_works_with_ai(
 
         // 提取JSON内容，处理markdown代码块
         let json_content = if content.starts_with("```json") && content.ends_with("```") {
-            &content[7..content.len() - 3].trim()
+            content[7..content.len() - 3].trim()
         } else if content.starts_with("```") && content.ends_with("```") {
-            &content[3..content.len() - 3].trim()
+            content[3..content.len() - 3].trim()
         } else {
             content
         };
@@ -198,7 +119,7 @@ pub async fn batch_process_searches(
             pb.set_message(format!(
                 "处理批次 {}/{} ({}个搜索任务)",
                 batch_index + 1,
-                (search_tasks.len() + batch_size - 1) / batch_size,
+                search_tasks.len().div_ceil(batch_size),
                 chunk.len()
             ));
         }
@@ -260,4 +181,16 @@ fn format_candidate_works(candidate_works: &[CandidateWork]) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// 单个作品匹配函数 - 保留用于特殊情况
+#[allow(dead_code)]
+pub async fn match_works_with_ai(
+    source_work: &AnimeWork,
+    candidate_works: &[CandidateWork],
+    ai_config: &AiConfig,
+) -> Result<Option<u32>, Box<dyn std::error::Error>> {
+    let candidate_works_vec = candidate_works.to_vec();
+    let results = batch_match_works_with_ai(&[source_work], &[&candidate_works_vec], ai_config).await?;
+    Ok(results.first().copied().flatten())
 }

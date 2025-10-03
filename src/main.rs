@@ -183,7 +183,7 @@ mod tests {
     async fn test_ai_individual_matching() -> Result<(), Box<dyn std::error::Error>> {
         println!("\n🧪 测试AI单个匹配...");
 
-        use crate::ai::object_matcher::{CandidateWork, match_works_with_ai};
+        use crate::ai::object_matcher::{CandidateWork, batch_match_works_with_ai};
         use crate::meta_providers::bangumi::search_bangumi_for_works;
         use crate::models::{AiConfig, AnimeWork};
 
@@ -220,7 +220,8 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works1.len());
-        let result1 = match_works_with_ai(&anime_work1, &candidate_works1, &ai_config).await?;
+        let result1 = batch_match_works_with_ai(&[&anime_work1], &[&candidate_works1], &ai_config).await?;
+        let result1 = result1.first().copied().flatten();
         println!("匹配结果: {:?}", result1);
         println!("预期结果: None");
         assert_eq!(result1, None, "破产富豪应该匹配不到任何结果");
@@ -260,7 +261,8 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works2.len());
-        let result2 = match_works_with_ai(&anime_work2, &candidate_works2, &ai_config).await?;
+        let result2 = batch_match_works_with_ai(&[&anime_work2], &[&candidate_works2], &ai_config).await?;
+        let result2 = result2.first().copied().flatten();
         println!("匹配结果: {:?}", result2);
         println!("预期结果: Some(434807)");
         assert_eq!(result2, Some(434807), "某天成为公主应该匹配到魔法公主的小烦恼 (ID: 434807)");
@@ -299,7 +301,8 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works3.len());
-        let result3 = match_works_with_ai(&anime_work3, &candidate_works3, &ai_config).await?;
+        let result3 = batch_match_works_with_ai(&[&anime_work3], &[&candidate_works3], &ai_config).await?;
+        let result3 = result3.first().copied().flatten();
         println!("匹配结果: {:?}", result3);
         println!("预期结果: None");
         assert_eq!(result3, None, "罗小黑战记应该匹配不到任何结果");
@@ -343,7 +346,8 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works4.len());
-        let result4 = match_works_with_ai(&anime_work4, &candidate_works4, &ai_config).await?;
+        let result4 = batch_match_works_with_ai(&[&anime_work4], &[&candidate_works4], &ai_config).await?;
+        let result4 = result4.first().copied().flatten();
         println!("匹配结果: {:?}", result4);
         println!("预期结果: Some(564421)");
         assert_eq!(result4, Some(564421), "异世界四重奏3应该匹配到异世界四重奏 第三季 (ID: 564421)");
@@ -387,7 +391,8 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works5.len());
-        let result5 = match_works_with_ai(&anime_work5, &candidate_works5, &ai_config).await?;
+        let result5 = batch_match_works_with_ai(&[&anime_work5], &[&candidate_works5], &ai_config).await?;
+        let result5 = result5.first().copied().flatten();
         println!("匹配结果: {:?}", result5);
         println!("预期结果: Some(570330)");
         assert_eq!(result5, Some(570330), "怪物弹珠 Dead Death Reloaded应该匹配到怪物弹珠 DEADVERSE RELOADED (ID: 570330)");

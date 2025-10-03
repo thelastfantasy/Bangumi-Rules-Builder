@@ -64,8 +64,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Install 7zip for Windows with specific version
-          choco install 7zip --version 23.01 -y
+          # Ensure 7zip is installed (check first to avoid conflicts)
+          if ! choco list --local-only | grep -q "^7zip"; then
+            choco install 7zip -y
+          else
+            echo "7zip already installed, skipping installation."
+          fi
         fi
 
     - name: Build release binary

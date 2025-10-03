@@ -81,7 +81,7 @@ jobs:
       if: matrix.os != 'windows-latest'
       shell: bash
       run: |
-        strip target/${{ matrix.target }}/release/bangumi_rules_builder${{ matrix.extension }}
+        strip target/${{ matrix.target }}/release/bangumi-rules-builder${{ matrix.extension }}
 
     - name: Package Python editor
       shell: bash
@@ -107,14 +107,14 @@ jobs:
 
         # Copy binary
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          copy target/${{ matrix.target }}/release/bangumi_rules_builder${{ matrix.extension }} release-package/
+          copy target/${{ matrix.target }}/release/bangumi-rules-builder${{ matrix.extension }} release-package/
           # Copy Python editor files
           xcopy dist\* release-package\ /E /I /Y
           # Copy configuration templates
           copy tasks.json release-package/tasks.json.example
           copy README.md release-package/
         else
-          cp target/${{ matrix.target }}/release/bangumi_rules_builder${{ matrix.extension }} release-package/
+          cp target/${{ matrix.target }}/release/bangumi-rules-builder${{ matrix.extension }} release-package/
           # Copy Python editor files
           cp -r dist/* release-package/
           # Copy configuration templates

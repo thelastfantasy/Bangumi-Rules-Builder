@@ -63,6 +63,10 @@ jobs:
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
+          # Install cross-compilation tools for ring crate
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          fi
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
           # Ensure 7zip is installed (check first to avoid conflicts)
           if ! choco list --local-only | findstr /B "7zip" >nul; then
@@ -173,6 +177,8 @@ jobs:
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
 
     - name: Run tests
       shell: bash

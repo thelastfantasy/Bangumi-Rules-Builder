@@ -26,6 +26,23 @@ Thumbs.db
 # Claude Code configuration
 .claude/
 
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# uv lock file (should be committed for reproducibility)
+# uv.lock
+
 # Logs
 *.log
 

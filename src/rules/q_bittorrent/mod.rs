@@ -53,14 +53,14 @@ pub fn generate_qb_rules(
 
         if result.bangumi_id.is_some() {
             // 有Bangumi信息：使用中文名称和别名
-            all_names.extend(result.aliases.clone());
+            all_names.extend_from_slice(&result.aliases);
             // 添加清理后的日文标题，提高匹配准确性
             if work_name != result.cleaned_title {
                 all_names.push(result.cleaned_title.clone());
             }
         } else {
             // 没有Bangumi信息：使用AI生成的关键字
-            all_names.extend(result.keywords.clone());
+            all_names.extend_from_slice(&result.keywords);
         }
 
         // 去重并转义特殊字符

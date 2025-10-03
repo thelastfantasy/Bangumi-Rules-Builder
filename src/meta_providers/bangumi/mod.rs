@@ -1,4 +1,5 @@
-use crate::models::{AnimeWork, BangumiResult, BangumiSubject, BangumiInfoboxItem};
+use crate::models::{AnimeWork, BangumiResult, BangumiSubject, BangumiInfoboxItem, AiConfig};
+use crate::ai::object_matcher::{CandidateWork, batch_process_searches};
 use chrono::{DateTime, FixedOffset, NaiveDate, TimeZone};
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -8,28 +9,30 @@ pub async fn search_bangumi_for_works(
     let client = reqwest::Client::new();
     let mut results = Vec::new();
 
-    // 创建进度条
+    // 创建批量搜索进度条
     let total_works = works.len();
-    let pb = ProgressBar::new(total_works as u64);
-    pb.set_style(
+    let search_pb = ProgressBar::new(total_works as u64);
+    search_pb.set_style(
         ProgressStyle::with_template(
             "{spinner:.yellow} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({percent}%) {msg}"
         )
         .unwrap()
         .progress_chars("█▓▒░")
     );
-    pb.enable_steady_tick(std::time::Duration::from_millis(250));
-    pb.set_message("Bangumi搜索中...");
+    search_pb.enable_steady_tick(std::time::Duration::from_millis(250));
+    search_pb.set_message("Bangumi批量搜索中...");
+
+    // 准备批量搜索任务
+    let mut search_tasks = Vec::new();
+    let mut work_indices = Vec::new();
 
     for (index, work) in works.iter().enumerate() {
-        pb.set_message(format!(
+        search_pb.set_message(format!(
             "搜索作品: {} ({}/{})",
             work.cleaned_title,
             index + 1,
             total_works
         ));
-
-        let mut found = false;
 
         // 构建搜索关键词数组：包含cleaned_title和keywords，并去重
         let mut search_keywords: Vec<&str> = Vec::new();
@@ -40,31 +43,90 @@ pub async fn search_bangumi_for_works(
         search_keywords.sort();
         search_keywords.dedup();
 
-        // 尝试每个关键字
+        // 收集所有候选作品，按Bangumi ID去重
+        let mut all_candidate_works: Vec<CandidateWork> = Vec::new();
+
         for keyword in search_keywords {
-            if let Some(subject) =
-                search_bangumi_with_keyword(&client, keyword, &work.air_date).await?
-            {
-                let chinese_name = if !subject.name_cn.is_empty() {
-                    Some(subject.name_cn.clone())
-                } else {
-                    None
-                };
+            // 先搜索Bangumi获取候选作品
+            let subjects = search_bangumi_with_keyword(&client, keyword, &work.air_date).await?;
 
-                let aliases = extract_aliases_from_infobox(&subject.infobox);
+            if !subjects.is_empty() {
+                // 添加候选作品到集合中
+                for subject in subjects {
+                    let candidate = CandidateWork::from(&subject);
+                    // 检查是否已存在相同ID的候选作品
+                    if !all_candidate_works.iter().any(|c| c.bangumi_id == candidate.bangumi_id) {
+                        all_candidate_works.push(candidate);
+                    }
+                }
+            }
+        }
 
-                results.push(BangumiResult {
-                    original_title: work.original_title.clone(),
-                    cleaned_title: work.cleaned_title.clone(),
-                    bangumi_id: Some(subject.id),
-                    chinese_name,
-                    aliases,
-                    air_date: work.air_date,
-                    keywords: work.keywords.clone(),
-                });
+        // 如果有候选作品，创建一个搜索任务
+        if !all_candidate_works.is_empty() {
+            search_tasks.push((work.clone(), all_candidate_works));
+            work_indices.push(index);
+        }
 
-                found = true;
-                break;
+        // 更新搜索进度条
+        search_pb.inc(1);
+    }
+
+    // 完成搜索进度条
+    search_pb.finish_with_message("Bangumi搜索完成");
+
+    // 创建AI批量匹配进度条
+    let ai_pb = ProgressBar::new(search_tasks.len() as u64);
+    ai_pb.set_style(
+        ProgressStyle::with_template(
+            "{spinner:.green} [{elapsed_precise}] [{bar:40.magenta/cyan}] {pos}/{len} ({percent}%) {msg}"
+        )
+        .unwrap()
+        .progress_chars("█▓▒░")
+    );
+    ai_pb.enable_steady_tick(std::time::Duration::from_millis(250));
+    ai_pb.set_message("AI批量匹配中...");
+
+    // 使用批量AI匹配
+    let ai_config = AiConfig::deepseek();
+    let batch_size = 5; // 每批次5个任务
+    let matched_ids = batch_process_searches(&search_tasks, &ai_config, batch_size, Some(&ai_pb)).await?;
+
+    // 处理匹配结果
+    for (index, work) in works.iter().enumerate() {
+        let mut found = false;
+
+        // 查找该作品的匹配结果
+        for (task_index, &work_index) in work_indices.iter().enumerate() {
+            if work_index == index {
+                if let Some(bangumi_id) = matched_ids[task_index] {
+                    // 找到匹配，创建BangumiResult
+                    // 从候选作品中提取详细信息
+                    let search_task = &search_tasks[task_index];
+                    let candidate_works = &search_task.1;
+
+                    // 查找匹配的候选作品
+                    if let Some(matched_candidate) = candidate_works.iter().find(|c| c.bangumi_id == bangumi_id) {
+                        let chinese_name = if !matched_candidate.chinese_title.is_empty() {
+                            Some(matched_candidate.chinese_title.clone())
+                        } else {
+                            None
+                        };
+
+                        results.push(BangumiResult {
+                            original_title: work.original_title.clone(),
+                            cleaned_title: work.cleaned_title.clone(),
+                            bangumi_id: Some(bangumi_id),
+                            chinese_name,
+                            aliases: matched_candidate.aliases.clone(),
+                            air_date: work.air_date,
+                            keywords: work.keywords.clone(),
+                        });
+
+                        found = true;
+                        break;
+                    }
+                }
             }
         }
 
@@ -79,13 +141,10 @@ pub async fn search_bangumi_for_works(
                 keywords: work.keywords.clone(),
             });
         }
-
-        // 更新进度条
-        pb.inc(1);
     }
 
     // 完成进度条
-    pb.finish_with_message("Bangumi搜索完成");
+    ai_pb.finish_with_message("AI批量匹配完成");
 
     Ok(results)
 }
@@ -94,7 +153,7 @@ pub async fn search_bangumi_with_keyword(
     client: &reqwest::Client,
     keyword: &str,
     air_date: &Option<NaiveDate>,
-) -> Result<Option<BangumiSubject>, Box<dyn std::error::Error>> {
+) -> Result<Vec<BangumiSubject>, Box<dyn std::error::Error>> {
     let url = "https://api.bgm.tv/v0/search/subjects";
 
     // 构建日期范围查询
@@ -162,67 +221,27 @@ pub async fn search_bangumi_with_keyword(
         }
 
         if let Some(data_array) = json_response["data"].as_array() {
-            let mut best_match: Option<BangumiSubject> = None;
-            let mut best_score = 0.0;
+            // 返回所有搜索结果，让批量处理来处理匹配
+            let subjects: Vec<BangumiSubject> = data_array
+                .iter()
+                .filter_map(|subject_data| {
+                    serde_json::from_value::<BangumiSubject>(subject_data.clone()).ok()
+                })
+                .collect();
 
-            for subject_data in data_array {
-                if let Ok(subject) = serde_json::from_value::<BangumiSubject>(subject_data.clone()) {
-                    let mut score = 0.0;
-
-                    // 1. 检查日文名称匹配（权重最高）
-                    if is_title_matching(&subject.name, keyword) {
-                        score += 0.5;
-                    }
-
-                    // 2. 检查中文名称匹配
-                    if !subject.name_cn.is_empty() && is_title_matching(&subject.name_cn, keyword) {
-                        score += 0.3;
-                    }
-
-                    // 3. 检查别名匹配
-                    let aliases = extract_aliases_from_infobox(&subject.infobox);
-                    for alias in &aliases {
-                        if is_title_matching(alias, keyword) {
-                            score += 0.2;
-                            break; // 只加一次分
-                        }
-                    }
-
-                    // 特别调试：输出问题作品的详细评分（在移动subject之前）
-                    if is_problem_work && score > 0.0 {
-                        println!("🔍 调试：匹配评分详情");
-                        println!("   搜索关键字: '{}'", keyword);
-                        println!("   作品ID: {}", subject.id);
-                        println!("   作品名称: '{}'", subject.name);
-                        println!("   中文名称: '{}'", subject.name_cn);
-                        println!("   最终评分: {}", score);
-                    }
-
-                    // 如果分数高于当前最佳匹配，更新最佳匹配
-                    if score > best_score {
-                        best_score = score;
-                        best_match = Some(subject);
-                    }
-                }
+            if is_problem_work {
+                println!("🔍 调试：找到 {} 个搜索结果", subjects.len());
             }
 
-            // 只有当匹配分数达到阈值时才返回结果
-            if best_score >= 0.5 {
-                if is_problem_work {
-                    println!("🔍 调试：匹配成功，最佳评分: {}", best_score);
-                }
-                return Ok(best_match);
-            } else if is_problem_work {
-                println!("🔍 调试：匹配失败，最佳评分: {} (未达到阈值0.5)", best_score);
-            }
+            return Ok(subjects);
         }
     }
 
     if is_problem_work {
-        println!("🔍 调试：未找到匹配结果");
+        println!("🔍 调试：未找到搜索结果");
     }
 
-    Ok(None)
+    Ok(Vec::new())
 }
 
 fn build_air_date_filter(air_date: &Option<NaiveDate>) -> Option<serde_json::Value> {
@@ -252,56 +271,6 @@ fn convert_to_jst_date(naive_date: NaiveDate) -> DateTime<FixedOffset> {
         .unwrap()
 }
 
-fn is_title_matching(bangumi_title: &str, search_keyword: &str) -> bool {
-    // 改进的名称匹配逻辑
-    let title_lower = bangumi_title.to_lowercase();
-    let keyword_lower = search_keyword.to_lowercase();
-
-    // 1. 如果标题完全包含关键词，认为是强匹配
-    if title_lower.contains(&keyword_lower) {
-        return true;
-    }
-
-    // 2. 如果关键词完全包含标题，也认为是匹配
-    if keyword_lower.contains(&title_lower) {
-        return true;
-    }
-
-    // 3. 对于较长的关键词，检查是否有显著的重叠部分
-    if keyword_lower.len() > 5 {
-        // 计算最长公共子串长度
-        let common_length = longest_common_substring(&title_lower, &keyword_lower);
-        let min_length = std::cmp::min(title_lower.len(), keyword_lower.len());
-
-        // 如果公共子串长度超过较短字符串的60%，认为是匹配
-        if common_length as f32 / min_length as f32 > 0.6 {
-            return true;
-        }
-    }
-
-    false
-}
-
-fn longest_common_substring(s1: &str, s2: &str) -> usize {
-    let s1_chars: Vec<char> = s1.chars().collect();
-    let s2_chars: Vec<char> = s2.chars().collect();
-
-    let mut max_len = 0;
-
-    for i in 0..s1_chars.len() {
-        for j in 0..s2_chars.len() {
-            let mut k = 0;
-            while i + k < s1_chars.len() && j + k < s2_chars.len() && s1_chars[i + k] == s2_chars[j + k] {
-                k += 1;
-            }
-            if k > max_len {
-                max_len = k;
-            }
-        }
-    }
-
-    max_len
-}
 
 pub fn extract_aliases_from_infobox(infobox: &[BangumiInfoboxItem]) -> Vec<String> {
     let mut aliases = Vec::new();

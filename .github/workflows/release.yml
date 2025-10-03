@@ -58,6 +58,7 @@ jobs:
         targets: ${{ matrix.target }}
 
     - name: Install cross-compilation dependencies
+      shell: bash
       run: |
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
           sudo apt-get update
@@ -68,15 +69,18 @@ jobs:
         fi
 
     - name: Build release binary
+      shell: bash
       run: |
         cargo build --release --target ${{ matrix.target }}
 
     - name: Strip binary (Linux/macOS)
       if: matrix.os != 'windows-latest'
+      shell: bash
       run: |
         strip target/${{ matrix.target }}/release/bangumi_rules_builder${{ matrix.extension }}
 
     - name: Package Python editor
+      shell: bash
       run: |
         # Copy Python editor files
         mkdir -p dist
@@ -93,6 +97,7 @@ jobs:
         fi
 
     - name: Create release archive
+      shell: bash
       run: |
         mkdir -p release-package
 
@@ -142,6 +147,7 @@ jobs:
       uses: actions/download-artifact@v4
 
     - name: Display structure of downloaded files
+      shell: bash
       run: ls -R
 
     - name: Create Release
@@ -163,9 +169,11 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
 
     - name: Run tests
+      shell: bash
       run: cargo test
 
     - name: Check code
+      shell: bash
       run: |
         cargo check
         cargo clippy -- -D warnings

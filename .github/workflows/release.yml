@@ -19,31 +19,31 @@ jobs:
           # Windows
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: smart-bangumi-qb-rule-generator-windows-x86_64
+            artifact_name: bangumi-rules-builder-windows-x86_64
             extension: .exe
           - os: windows-latest
             target: i686-pc-windows-msvc
-            artifact_name: smart-bangumi-qb-rule-generator-windows-i686
+            artifact_name: bangumi-rules-builder-windows-i686
             extension: .exe
 
           # Linux
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: smart-bangumi-qb-rule-generator-linux-x86_64
+            artifact_name: bangumi-rules-builder-linux-x86_64
             extension: ''
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            artifact_name: smart-bangumi-qb-rule-generator-linux-aarch64
+            artifact_name: bangumi-rules-builder-linux-aarch64
             extension: ''
 
           # macOS
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact_name: smart-bangumi-qb-rule-generator-macos-x86_64
+            artifact_name: bangumi-rules-builder-macos-x86_64
             extension: ''
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: smart-bangumi-qb-rule-generator-macos-aarch64
+            artifact_name: bangumi-rules-builder-macos-aarch64
             extension: ''
 
     steps:
@@ -85,7 +85,7 @@ jobs:
         mkdir -p release-package
 
         # Copy binary
-        cp target/${{ matrix.target }}/release/smart_bangumi_qb_rule_generator${{ matrix.extension }} release-package/
+        cp target/${{ matrix.target }}/release/bangumi_rules_builder${{ matrix.extension }} release-package/
 
         # Copy Python editor files
         cp -r dist/* release-package/

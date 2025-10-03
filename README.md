@@ -1,4 +1,4 @@
-# Smart Bangumi qBittorrent Rule Generator
+# Bangumi Rules Builder
 
 一个智能的 Rust 应用程序，通过网页抓取、AI 处理和 Bangumi API 集成，自动为动漫季度生成 qBittorrent RSS 下载规则。
 
@@ -30,8 +30,8 @@
 #### 方法 1：从源码构建
 ```bash
 # 克隆仓库
-git clone https://github.com/your-username/smart-bangumi-qb-rule-generator.git
-cd smart-bangumi-qb-rule-generator
+git clone https://github.com/your-username/bangumi-rules-builder.git
+cd bangumi-rules-builder
 
 # 构建项目
 cargo build --release
@@ -41,7 +41,7 @@ cargo run
 ```
 
 #### 方法 2：使用预编译二进制
-从 [Releases](https://github.com/your-username/smart-bangumi-qb-rule-generator/releases) 页面下载对应平台的二进制文件。
+从 [Releases](https://github.com/your-username/bangumi-rules-builder/releases) 页面下载对应平台的二进制文件。
 
 ### 配置
 

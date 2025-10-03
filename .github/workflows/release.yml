@@ -65,7 +65,7 @@ jobs:
           sudo apt-get install -y gcc-aarch64-linux-gnu
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
           # Ensure 7zip is installed (check first to avoid conflicts)
-          if ! choco list --local-only | grep -q "^7zip"; then
+          if ! choco list --local-only | findstr /B "7zip" >nul; then
             choco install 7zip -y
           else
             echo "7zip already installed, skipping installation."

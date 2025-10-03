@@ -85,8 +85,8 @@ pub async fn match_works_with_ai(
 /// 批量匹配多个源作品与候选作品
 /// 将多个匹配请求合并为一个AI请求，显著减少API调用次数
 pub async fn batch_match_works_with_ai(
-    source_works: &[AnimeWork],
-    candidate_works_map: &[Vec<CandidateWork>],
+    source_works: &[&AnimeWork],
+    candidate_works_map: &[&Vec<CandidateWork>],
     ai_config: &AiConfig,
 ) -> Result<Vec<Option<u32>>, Box<dyn std::error::Error>> {
     if source_works.len() != candidate_works_map.len() {
@@ -203,10 +203,11 @@ pub async fn batch_process_searches(
             ));
         }
 
-        let source_works: Vec<AnimeWork> = chunk.iter().map(|(source, _)| source.clone()).collect();
-        let candidate_works_map: Vec<Vec<CandidateWork>> = chunk.iter().map(|(_, candidates)| candidates.clone()).collect();
-
-        let batch_results = batch_match_works_with_ai(&source_works, &candidate_works_map, ai_config).await?;
+        let batch_results = batch_match_works_with_ai(
+            &chunk.iter().map(|(source, _)| source).collect::<Vec<_>>(),
+            &chunk.iter().map(|(_, candidates)| candidates).collect::<Vec<_>>(),
+            ai_config
+        ).await?;
         all_results.extend(batch_results);
 
         // 更新进度条
@@ -221,12 +222,12 @@ pub async fn batch_process_searches(
     Ok(all_results)
 }
 
-fn format_batch_match_tasks(source_works: &[AnimeWork], candidate_works_map: &[Vec<CandidateWork>]) -> String {
+fn format_batch_match_tasks(source_works: &[&AnimeWork], candidate_works_map: &[&Vec<CandidateWork>]) -> String {
     source_works
         .iter()
         .enumerate()
-        .map(|(i, source_work)| {
-            let candidate_works = &candidate_works_map[i];
+        .map(|(i, &source_work)| {
+            let candidate_works = candidate_works_map[i];
             format!(
                 "\n=== 任务 {} ===\n[源作品信息]\n- 原标题: {}\n- 清理标题: {}\n- 放映时间: {}\n- 关键词: {:?}\n\n[候选作品列表]\n{}\n=== 任务 {} 结束 ===",
                 i,

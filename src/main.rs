@@ -570,8 +570,11 @@ mod tests {
             }
         }
 
+        let source_works_refs: Vec<&AnimeWork> = source_works.iter().collect();
+        let candidate_works_map_refs: Vec<&Vec<CandidateWork>> = candidate_works_map.iter().collect();
+
         let batch_results =
-            batch_match_works_with_ai(&source_works, &candidate_works_map, &ai_config).await?;
+            batch_match_works_with_ai(&source_works_refs, &candidate_works_map_refs, &ai_config).await?;
 
         // 第三步：验证匹配结果是否符合预期
         println!("\n📊 AI批量匹配结果验证:");

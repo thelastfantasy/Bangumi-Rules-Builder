@@ -99,9 +99,8 @@ jobs:
     - name: Package Python editor
       shell: bash
       run: |
-        # Copy Python editor files
+        # Copy Python editor documentation
         mkdir -p dist
-        cp qb_rule_editor.py dist/
         cp EDITOR_README.md dist/
 
     - name: Build Python executable

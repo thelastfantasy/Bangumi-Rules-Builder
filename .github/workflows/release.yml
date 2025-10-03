@@ -92,39 +92,23 @@ jobs:
       run: |
         # Copy Python editor files
         mkdir -p dist
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp qb_rule_editor.py dist/
-          cp run_editor.bat dist/
-          cp run_editor.ps1 dist/
-          cp EDITOR_README.md dist/
-        else
-          cp qb_rule_editor.py dist/
-          cp run_editor.bat dist/
-          cp run_editor.ps1 dist/
-          cp EDITOR_README.md dist/
-        fi
+        cp qb_rule_editor.py dist/
+        cp run_editor.bat dist/
+        cp run_editor.ps1 dist/
+        cp EDITOR_README.md dist/
 
     - name: Create release archive
       shell: bash
       run: |
         mkdir -p release-package
 
-        # Copy binary
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp target/${{ matrix.target }}/release/bangumi-rules-builder${{ matrix.extension }} release-package/
-          # Copy Python editor files
-          cp -r dist/* release-package/
-          # Copy configuration templates
-          cp tasks.json release-package/tasks.json.example
-          cp README.md release-package/
-        else
-          cp target/${{ matrix.target }}/release/bangumi-rules-builder${{ matrix.extension }} release-package/
-          # Copy Python editor files
-          cp -r dist/* release-package/
-          # Copy configuration templates
-          cp tasks.json release-package/tasks.json.example
-          cp README.md release-package/
-        fi
+        # Copy binary and files
+        cp target/${{ matrix.target }}/release/bangumi-rules-builder${{ matrix.extension }} release-package/
+        # Copy Python editor files
+        cp -r dist/* release-package/
+        # Copy configuration templates
+        cp tasks.json release-package/tasks.json.example
+        cp README.md release-package/
 
         # Create archive
         if [ "${{ matrix.os }}" = "windows-latest" ]; then

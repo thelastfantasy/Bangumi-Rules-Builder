@@ -132,6 +132,43 @@ mod tests {
             println!("❌ 未找到作品");
         }
 
+        // 测试 "SANDA" 关键词
+        println!("\n📝 测试关键词: SANDA");
+        let subjects = search_bangumi_with_keyword(&client, "SANDA", &None).await?;
+        if !subjects.is_empty() {
+            let subject = &subjects[0];
+            println!("✅ 成功找到作品: {}", subject.name);
+            println!("   Bangumi ID: {}", subject.id);
+            println!("   中文名称: {}", subject.name_cn);
+        } else {
+            println!("❌ 未找到作品");
+        }
+
+        // 测试 "SANDA サンダ" 关键词
+        println!("\n📝 测试关键词: SANDA サンダ");
+        let subjects = search_bangumi_with_keyword(&client, "SANDA サンダ", &None).await?;
+        if !subjects.is_empty() {
+            let subject = &subjects[0];
+            println!("✅ 成功找到作品: {}", subject.name);
+            println!("   Bangumi ID: {}", subject.id);
+            println!("   中文名称: {}", subject.name_cn);
+        } else {
+            println!("❌ 未找到作品");
+        }
+
+        // 测试 "SANDA" 关键词带日期过滤
+        println!("\n📝 测试关键词: SANDA (带日期过滤 2025-10-03)");
+        let sanda_date = chrono::NaiveDate::from_ymd_opt(2025, 10, 3);
+        let subjects = search_bangumi_with_keyword(&client, "SANDA", &sanda_date).await?;
+        if !subjects.is_empty() {
+            let subject = &subjects[0];
+            println!("✅ 成功找到作品: {}", subject.name);
+            println!("   Bangumi ID: {}", subject.id);
+            println!("   中文名称: {}", subject.name_cn);
+        } else {
+            println!("❌ 未找到作品 - 日期过滤可能太严格");
+        }
+
         Ok(())
     }
 
@@ -220,7 +257,8 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works1.len());
-        let result1 = batch_match_works_with_ai(&[&anime_work1], &[&candidate_works1], &ai_config).await?;
+        let result1 =
+            batch_match_works_with_ai(&[&anime_work1], &[&candidate_works1], &ai_config).await?;
         let result1 = result1.first().copied().flatten();
         println!("匹配结果: {:?}", result1);
         println!("预期结果: None");
@@ -261,11 +299,16 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works2.len());
-        let result2 = batch_match_works_with_ai(&[&anime_work2], &[&candidate_works2], &ai_config).await?;
+        let result2 =
+            batch_match_works_with_ai(&[&anime_work2], &[&candidate_works2], &ai_config).await?;
         let result2 = result2.first().copied().flatten();
         println!("匹配结果: {:?}", result2);
         println!("预期结果: Some(434807)");
-        assert_eq!(result2, Some(434807), "某天成为公主应该匹配到魔法公主的小烦恼 (ID: 434807)");
+        assert_eq!(
+            result2,
+            Some(434807),
+            "某天成为公主应该匹配到魔法公主的小烦恼 (ID: 434807)"
+        );
         println!("✅ 匹配结果符合预期");
 
         // 测试案例3: 罗小黑战记
@@ -278,7 +321,7 @@ mod tests {
                 "罗小黑战记".to_string(),
                 "The Legend of Luo Xiao Hei".to_string(),
             ],
-        }; // 该数据应该匹配不到任何结果
+        }; // 该数据应该匹配不到任何结果，但如果放大日期范围到100天会匹配到442114 （放送日本：2025-07-18）
 
         let bangumi_results3 = search_bangumi_for_works(&[anime_work3.clone()]).await?;
 
@@ -301,11 +344,12 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works3.len());
-        let result3 = batch_match_works_with_ai(&[&anime_work3], &[&candidate_works3], &ai_config).await?;
+        let result3 =
+            batch_match_works_with_ai(&[&anime_work3], &[&candidate_works3], &ai_config).await?;
         let result3 = result3.first().copied().flatten();
         println!("匹配结果: {:?}", result3);
-        println!("预期结果: None");
-        assert_eq!(result3, None, "罗小黑战记应该匹配不到任何结果");
+        println!("预期结果: Some(442114)");
+        assert_eq!(result3, Some(442114), "罗小黑战记应该匹配到 (ID: 442114)");
         println!("✅ 匹配结果符合预期");
 
         // 测试案例4: 异世界四重奏3
@@ -346,11 +390,16 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works4.len());
-        let result4 = batch_match_works_with_ai(&[&anime_work4], &[&candidate_works4], &ai_config).await?;
+        let result4 =
+            batch_match_works_with_ai(&[&anime_work4], &[&candidate_works4], &ai_config).await?;
         let result4 = result4.first().copied().flatten();
         println!("匹配结果: {:?}", result4);
         println!("预期结果: Some(564421)");
-        assert_eq!(result4, Some(564421), "异世界四重奏3应该匹配到异世界四重奏 第三季 (ID: 564421)");
+        assert_eq!(
+            result4,
+            Some(564421),
+            "异世界四重奏3应该匹配到异世界四重奏 第三季 (ID: 564421)"
+        );
         println!("✅ 匹配结果符合预期");
 
         // 测试案例5: 怪物弹珠 Dead Death Reloaded
@@ -391,11 +440,16 @@ mod tests {
             .collect();
 
         println!("找到 {} 个候选作品", candidate_works5.len());
-        let result5 = batch_match_works_with_ai(&[&anime_work5], &[&candidate_works5], &ai_config).await?;
+        let result5 =
+            batch_match_works_with_ai(&[&anime_work5], &[&candidate_works5], &ai_config).await?;
         let result5 = result5.first().copied().flatten();
         println!("匹配结果: {:?}", result5);
         println!("预期结果: Some(570330)");
-        assert_eq!(result5, Some(570330), "怪物弹珠 Dead Death Reloaded应该匹配到怪物弹珠 DEADVERSE RELOADED (ID: 570330)");
+        assert_eq!(
+            result5,
+            Some(570330),
+            "怪物弹珠 Dead Death Reloaded应该匹配到怪物弹珠 DEADVERSE RELOADED (ID: 570330)"
+        );
         println!("✅ 匹配结果符合预期");
 
         Ok(())
@@ -405,11 +459,8 @@ mod tests {
     async fn test_ai_batch_matching() -> Result<(), Box<dyn std::error::Error>> {
         println!("\n🧪 测试AI批量匹配...");
 
-        use crate::ai::object_matcher::{CandidateWork, batch_match_works_with_ai};
         use crate::meta_providers::bangumi::search_bangumi_for_works;
-        use crate::models::{AiConfig, AnimeWork};
-
-        let ai_config = AiConfig::deepseek();
+        use crate::models::AnimeWork;
 
         // 使用关键测试案例，包含边界情况和复杂匹配场景
         let source_works = vec![
@@ -417,7 +468,7 @@ mod tests {
             AnimeWork {
                 original_title: "SHIBUYA♡HACHI 第4クール".to_string(),
                 cleaned_title: "SHIBUYA♡HACHI 第4クール".to_string(),
-                air_date: None, // 不设置日期，避免日期过滤问题
+                air_date: chrono::NaiveDate::from_ymd_opt(2025, 10, 4),
                 keywords: vec![
                     "SHIBUYA♡HACHI 第4クール".to_string(),
                     "SHIBUYA HACHI 第4クール".to_string(),
@@ -429,7 +480,7 @@ mod tests {
             AnimeWork {
                 original_title: "異世界食堂".to_string(),
                 cleaned_title: "異世界食堂".to_string(),
-                air_date: None, // 不设置日期，避免日期过滤问题
+                air_date: chrono::NaiveDate::from_ymd_opt(2017, 7, 3),
                 keywords: vec![
                     "異世界食堂".to_string(),
                     "异世界食堂".to_string(),
@@ -472,8 +523,7 @@ mod tests {
                     "罗小黑战记".to_string(),
                     "The Legend of Luo Xiao Hei".to_string(),
                 ],
-            }, // 该数据应该匹配不到任何结果
-            // 复杂匹配测试案例 - 测试季度和复杂名称匹配
+            }, // 该数据应该匹配不到任何结果，但如果放大日期范围到100天的话会匹配到442114 （放送日本：2025-07-18）
             AnimeWork {
                 original_title: "異世界かるてっと3".to_string(),
                 cleaned_title: "異世界かるてっと3".to_string(),
@@ -515,6 +565,59 @@ mod tests {
                     "Pokemon Concierge S2".to_string(),
                 ],
             }, // 该数据应该匹配到宝可梦 礼宾部 新剧集，bangumi_id: 481530
+            // 新增测试案例 - 2025年10月新番
+            AnimeWork {
+                original_title: "ガングリオン".to_string(),
+                cleaned_title: "ガングリオン".to_string(),
+                air_date: chrono::NaiveDate::from_ymd_opt(2025, 10, 3),
+                keywords: vec![
+                    "ガングリオン".to_string(),
+                    "Ganglion".to_string(),
+                    "Ganglion anime".to_string(),
+                    "神经节".to_string(),
+                    "Ganglion 2025".to_string(),
+                    "Ganglion new anime".to_string(),
+                ],
+            }, // 该数据应该匹配到ガングリオン，bangumi_id: 581598
+            AnimeWork {
+                original_title: "SANDA【サンダ】".to_string(),
+                cleaned_title: "SANDA".to_string(),
+                air_date: chrono::NaiveDate::from_ymd_opt(2025, 10, 3),
+                keywords: vec![
+                    "SANDA".to_string(),
+                    "SANDA サンダ".to_string(),
+                    "SANDA anime".to_string(),
+                    "三太".to_string(),
+                    "SANDA 2025".to_string(),
+                    "Sanda new series".to_string(),
+                ],
+            }, // 该数据应该匹配到SANDA，bangumi_id: 503303
+            AnimeWork {
+                original_title: "信じていた仲間達にダンジョン奥地で殺されかけたがギフト『無限ガチャ』でレベル9999の仲間達を手に入れて元パーティーメンバーと世界に復讐＆『ざまぁ！』します！".to_string(),
+                cleaned_title: "信じていた仲間達にダンジョン奥地で殺されかけたがギフト『無限ガチャ』でレベル9999の仲間達を手に入れて元パーティーメンバーと世界に復讐＆『ざまぁ！』します！".to_string(),
+                air_date: chrono::NaiveDate::from_ymd_opt(2025, 10, 3),
+                keywords: vec![
+                    "信じていた仲間達にダンジョン奥地で殺されかけたがギフト 無限ガチャ でレベル9999の仲間達を手に入れて元パーティーメンバーと世界に復讐 ざまぁ します".to_string(),
+                    "被信任的同伴在迷宫深处杀害但获得无限扭蛋".to_string(),
+                    "Shinjiteita Nakamatachi ni Dungeon Okuchi de Korosarekaketa ga Gift Mugen Gacha de Level 9999 no Nakamatachi wo Te ni Irete Moto Party Member to Sekai ni Fukushuu Zamaa Shimasu".to_string(),
+                    "无限扭蛋复仇记".to_string(),
+                    "Mugen Gacha revenge anime".to_string(),
+                    "Level 9999 companions revenge".to_string(),
+                ],
+            }, // 该数据应该匹配到信じていた仲間達にダンジョン奥地で殺されかけたがギフト『無限ガチャ』でレベル9999の仲間達を手に入れて元パーティーメンバーと世界に復讐＆『ざまぁ！』します！，bangumi_id: 524195
+            AnimeWork {
+                original_title: "最後にひとつだけお願いしてもよろしいでしょうか".to_string(),
+                cleaned_title: "最後にひとつだけお願いしてもよろしいでしょうか".to_string(),
+                air_date: chrono::NaiveDate::from_ymd_opt(2025, 10, 3),
+                keywords: vec![
+                    "最後にひとつだけお願いしてもよろしいでしょうか".to_string(),
+                    "最后能再拜托您一件事吗".to_string(),
+                    "Saigo ni Hitotsu dake Onegai shitemo Yoroshii deshou ka".to_string(),
+                    "Saigo ni Hitotsu dake Onegai shitemo Yoroshii deshou ka anime".to_string(),
+                    "最后一个请求".to_string(),
+                    "One Last Request anime".to_string(),
+                ],
+            }, // 该数据应该匹配到最后にひとつだけお願いしてもよろしいでしょうか，bangumi_id: 513348
         ];
 
         println!("准备批量测试数据，共 {} 个作品", source_works.len());
@@ -525,61 +628,15 @@ mod tests {
             );
         }
 
-        // 第一步：使用search_bangumi_for_works获取所有候选作品
-        println!("\n🚀 第一步：搜索Bangumi获取候选作品...");
+        // 使用search_bangumi_for_works获取所有Bangumi匹配结果
+        println!("\n🚀 执行Bangumi搜索和AI匹配...");
         let bangumi_results = search_bangumi_for_works(&source_works).await?;
 
-        // 构建候选作品映射 - 每个源作品对应自己的候选作品列表
-        let mut candidate_works_map = vec![Vec::new(); source_works.len()];
-
-        // 将Bangumi结果映射回对应的源作品
-        for (index, result) in bangumi_results.iter().enumerate() {
-            if index < source_works.len() {
-                // 为每个Bangumi结果创建候选作品
-                if let Some(bangumi_id) = result.bangumi_id {
-                    candidate_works_map[index].push(CandidateWork {
-                        bangumi_id,
-                        japanese_title: result.original_title.clone(),
-                        chinese_title: result.chinese_name.clone().unwrap_or_default(),
-                        air_date: result.air_date.map(|d| d.to_string()),
-                        aliases: result.aliases.clone(),
-                        score: None,
-                    });
-                }
-            }
-        }
-
-        println!("候选作品映射构建完成:");
-        for (i, candidates) in candidate_works_map.iter().enumerate() {
-            println!("  作品{}: {} 个候选作品", i, candidates.len());
-        }
-
-        // 第二步：使用batch_match_works_with_ai进行批量匹配
-        println!("\n🚀 第二步：执行AI批量匹配...");
-
-        // 调试：打印候选作品信息
-        for (i, candidates) in candidate_works_map.iter().enumerate() {
-            if candidates.is_empty() {
-                println!("⚠️ 作品{}: 没有候选作品", i);
-            } else {
-                println!("📋 作品{}: {} 个候选作品", i, candidates.len());
-                for candidate in candidates {
-                    println!(
-                        "   候选: [ID: {}] {} (中文: {}) (日期: {:?})",
-                        candidate.bangumi_id,
-                        candidate.japanese_title,
-                        candidate.chinese_title,
-                        candidate.air_date
-                    );
-                }
-            }
-        }
-
-        let source_works_refs: Vec<&AnimeWork> = source_works.iter().collect();
-        let candidate_works_map_refs: Vec<&Vec<CandidateWork>> = candidate_works_map.iter().collect();
-
-        let batch_results =
-            batch_match_works_with_ai(&source_works_refs, &candidate_works_map_refs, &ai_config).await?;
+        // 直接从Bangumi结果中提取匹配的Bangumi ID
+        let batch_results: Vec<Option<u32>> = bangumi_results
+            .iter()
+            .map(|result| result.bangumi_id)
+            .collect();
 
         // 第三步：验证匹配结果是否符合预期
         println!("\n📊 AI批量匹配结果验证:");
@@ -592,10 +649,14 @@ mod tests {
             None,         // 作品2: 破产富豪 - 应该匹配不到任何结果
             Some(434807), // 作品3: 某天成为公主 - 应该匹配魔法公主的小烦恼，bangumi_id: 434807
             None,         // 作品4: 虚构的动画作品 - 应该匹配不到任何结果
-            None,         // 作品5: 罗小黑战记 - 应该匹配不到任何结果
+            Some(442114), // 作品5: 罗小黑战记 - 由于日期范围放宽到100天，现在匹配到442114 （放送日本：2025-07-18）
             Some(564421), // 作品6: 异世界四重奏3 - 应该匹配到564421
             Some(570330), // 作品7: 怪物弹珠 Dead Death Reloaded - 应该匹配到570330
             Some(481530), // 作品8: ポケモンコンシェルジュ【2nd Season】 - 应该匹配到宝可梦 礼宾部 新剧集，bangumi_id: 481530
+            Some(581598), // 作品9: ガングリオン - 应该匹配到581598
+            Some(503303), // 作品10: SANDA - 应该匹配到503303
+            Some(524195), // 作品11: 信じていた仲間達にダンジョン奥地で殺されかけたがギフト『無限ガチャ』でレベル9999の仲間達を手に入れて元パーティーメンバーと世界に復讐＆『ざまぁ！』します！ - 应该匹配到524195
+            Some(513348), // 作品12: 最後にひとつだけお願いしてもよろしいでしょうか - 应该匹配到513348
         ];
 
         for (i, (result, expected)) in batch_results

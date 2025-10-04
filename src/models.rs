@@ -179,6 +179,8 @@ pub struct BangumiSubject {
     pub name_cn: String,
     #[serde(default)]
     pub infobox: Vec<BangumiInfoboxItem>,
+    #[serde(default)]
+    pub date: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

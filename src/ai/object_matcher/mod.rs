@@ -5,6 +5,7 @@
 
 pub mod matcher;
 pub mod types;
+pub mod utils;
 
 // Re-export the main API
 #[allow(unused_imports)]

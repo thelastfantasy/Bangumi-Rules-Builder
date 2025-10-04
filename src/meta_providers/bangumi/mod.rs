@@ -27,9 +27,17 @@ pub async fn search_bangumi_for_works(
     let mut work_indices = Vec::new();
 
     for (index, work) in works.iter().enumerate() {
+        // 限制作品名称长度，避免进度条消息过长导致渲染问题
+        let display_title = if work.cleaned_title.chars().count() > 20 {
+            let truncated: String = work.cleaned_title.chars().take(17).collect();
+            format!("{}...", truncated)
+        } else {
+            work.cleaned_title.clone()
+        };
+
         search_pb.set_message(format!(
             "搜索作品: {} ({}/{})",
-            work.cleaned_title,
+            display_title,
             index + 1,
             total_works
         ));
@@ -47,7 +55,6 @@ pub async fn search_bangumi_for_works(
         let mut all_candidate_works: Vec<CandidateWork> = Vec::new();
 
         for keyword in search_keywords {
-            // 先搜索Bangumi获取候选作品
             let subjects = search_bangumi_with_keyword(&client, keyword, &work.air_date).await?;
 
             if !subjects.is_empty() {
@@ -89,7 +96,7 @@ pub async fn search_bangumi_for_works(
 
     // 使用批量AI匹配
     let ai_config = AiConfig::deepseek();
-    let batch_size = 5; // 每批次5个任务
+    let batch_size = 10; // 每批次10个任务
     let matched_ids = batch_process_searches(&search_tasks, &ai_config, batch_size, Some(&ai_pb)).await?;
 
     // 处理匹配结果
@@ -173,24 +180,6 @@ pub async fn search_bangumi_with_keyword(
         request_body["filter"]["air_date"] = date_filter.clone();
     }
 
-    // 特别调试：检查是否在搜索问题作品
-    let problem_keywords = [
-        "破産富豪",
-        "ある日、お姫様になってしまった件について",
-        "羅小黒戦記",
-        "MUZIK TIGER In the Forest 第2期",
-    ];
-
-    let is_problem_work = problem_keywords.iter().any(|k| keyword.contains(k));
-
-    if is_problem_work {
-        println!("\n🔍 调试：正在搜索问题作品的关键字: '{}'", keyword);
-        println!("   日期过滤器: {:?}", date_range);
-        println!(
-            "   Bangumi API 请求体: {}",
-            serde_json::to_string_pretty(&request_body).unwrap()
-        );
-    }
 
     let response = client
         .post(url)
@@ -200,25 +189,8 @@ pub async fn search_bangumi_with_keyword(
         .send()
         .await?;
 
-    if is_problem_work {
-        println!("   Bangumi API 响应状态: {}", response.status());
-    }
-
     if response.status().is_success() {
         let json_response: serde_json::Value = response.json().await?;
-
-        // 调试输出搜索结果（仅针对问题作品）
-        if is_problem_work
-            && let Some(data_array) = json_response["data"].as_array()
-        {
-            println!("   找到 {} 个搜索结果", data_array.len());
-            if !data_array.is_empty() {
-                println!(
-                    "   第一个结果: {}",
-                    serde_json::to_string_pretty(&data_array[0]).unwrap()
-                );
-            }
-        }
 
         if let Some(data_array) = json_response["data"].as_array() {
             // 返回所有搜索结果，让批量处理来处理匹配
@@ -229,16 +201,8 @@ pub async fn search_bangumi_with_keyword(
                 })
                 .collect();
 
-            if is_problem_work {
-                println!("🔍 调试：找到 {} 个搜索结果", subjects.len());
-            }
-
             return Ok(subjects);
         }
-    }
-
-    if is_problem_work {
-        println!("🔍 调试：未找到搜索结果");
     }
 
     Ok(Vec::new())
@@ -250,9 +214,9 @@ fn build_air_date_filter(air_date: &Option<NaiveDate>) -> Option<serde_json::Val
         // 将NaiveDate转换为JST时区，确保日期范围正确
         let jst_date = convert_to_jst_date(*date);
 
-        // 对于具体日期，搜索前后1个月的范围
-        let start_date = jst_date - chrono::Duration::days(30);
-        let end_date = jst_date + chrono::Duration::days(30);
+        // 对于具体日期，搜索前后100天的范围
+        let start_date = jst_date - chrono::Duration::days(100);
+        let end_date = jst_date + chrono::Duration::days(100);
 
         return Some(serde_json::json!([
             format!(">={}", start_date.format("%Y-%m-%d")),

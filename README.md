@@ -21,33 +21,34 @@
 ## 快速开始
 
 ### 系统要求
-- Rust 1.70+
+- Windows 10+ / Linux / macOS
+- qBittorrent 4.4+
 - Python 3.8+ (用于 GUI 编辑器)
 - 网络连接 (用于 API 调用)
+- DeepSeek API Key (用于 AI 处理)
 
 ### 安装
 
-#### 方法 1：从源码构建
-```bash
-# 克隆仓库
-git clone https://github.com/your-username/bangumi-rules-builder.git
-cd bangumi-rules-builder
-
-# 构建项目
-cargo build --release
-
-# 运行程序
-cargo run
-```
-
-#### 方法 2：使用预编译二进制
-从 [Releases](https://github.com/your-username/bangumi-rules-builder/releases) 页面下载对应平台的二进制文件。
+#### 使用预编译二进制
+从 [Releases](https://github.com/thelastfantasy/Bangumi-Rules-Builder/releases) 页面下载对应平台的二进制文件。
 
 ### 配置
 
 1. **设置 API 密钥**：
+
+   **Windows (命令提示符):**
+   ```cmd
+   set DEEPSEEK_API_KEY=your_deepseek_api_key
+   ```
+
+   **Windows (PowerShell):**
+   ```powershell
+   $env:DEEPSEEK_API_KEY="your_deepseek_api_key"
+   ```
+
+   **Linux/macOS:**
    ```bash
-   export DEEPSEEK_API_KEY="your-deepseek-api-key"
+   export DEEPSEEK_API_KEY="your_deepseek_api_key"
    ```
 
 2. **编辑任务配置** (`tasks.json`)：
@@ -60,8 +61,20 @@ cargo run
    ```
 
 3. **运行程序**：
+
+   **Windows:**
+   ```cmd
+   bangumi-rules-builder.exe
+   ```
+
+   **Linux:**
    ```bash
-   cargo run
+   ./bangumi-rules-builder
+   ```
+
+   **macOS:**
+   ```bash
+   ./bangumi-rules-builder
    ```
 
 ### 使用 GUI 编辑器

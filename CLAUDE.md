@@ -132,6 +132,26 @@ cargo test test_logger_functionality
 - Handle errors with `Result<_, Box<dyn std::error::Error>>`
 - **Testing**: All tests should be created in the `tests` module within `main.rs`, not in separate files
 
+### Git Branch Naming (Git Flow)
+Use Git Flow branch naming convention for better organization:
+
+**Main Branches:**
+- `main` - Stable production branch
+- `develop` - Development integration branch
+
+**Feature Branches:**
+- `feat/xxx` - New feature development (e.g., `feat/add-logging-system`)
+- `fix/xxx` - Bug fixes (e.g., `fix/date-parsing-issue`)
+- `docs/xxx` - Documentation updates
+- `refactor/xxx` - Code refactoring
+- `test/xxx` - Test-related changes
+- `chore/xxx` - Build process or tooling changes
+
+**Best Practices:**
+- Rename local branches before first push if they don't follow Git Flow
+- Use descriptive names that clearly indicate the purpose
+- Keep branch names lowercase with hyphens for readability
+
 ## File Structure
 
 ```

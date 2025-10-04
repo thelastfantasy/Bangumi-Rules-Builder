@@ -132,7 +132,7 @@ pub fn cache_results(results: &[BangumiResult]) -> Result<(), Box<dyn std::error
 }
 
 pub fn generate_statistics_report(stats: &Statistics, bangumi_results: &[BangumiResult], failed_works: &[(String, String)]) {
-    log::info!("\n{}", "=".repeat(60));
+    log::info!("{}", "=".repeat(60));
     log::info!("📊 程序运行统计报告");
     log::info!("{}", "=".repeat(60));
     log::info!("表格处理统计:");
@@ -149,7 +149,7 @@ pub fn generate_statistics_report(stats: &Statistics, bangumi_results: &[Bangumi
         stats.works_processed_by_ai
     );
 
-    log::info!("\nBangumi API搜索结果:");
+    log::info!("Bangumi API搜索结果:");
     log::info!(
         "  - 成功找到Bangumi信息的作品: {}",
         stats.works_with_bangumi_info
@@ -159,13 +159,13 @@ pub fn generate_statistics_report(stats: &Statistics, bangumi_results: &[Bangumi
         stats.works_without_bangumi_info
     );
 
-    log::info!("\nqBittorrent规则生成:");
+    log::info!("qBittorrent规则生成:");
     log::info!("  - 生成的下载规则数量: {}", stats.qb_rules_generated);
     log::info!("  - 规则生成失败数量: {}", stats.qb_rules_failed);
 
     // 显示规则生成失败的作品和原因
     if !failed_works.is_empty() {
-        log::info!("\n规则生成失败的作品列表:");
+        log::info!("规则生成失败的作品列表:");
         for (work_name, reason) in failed_works {
             log::info!("  - {} (原因: {})", work_name, reason);
         }
@@ -176,12 +176,12 @@ pub fn generate_statistics_report(stats: &Statistics, bangumi_results: &[Bangumi
     let expected_rules = total_bangumi_works - stats.qb_rules_failed;
     if stats.qb_rules_generated < expected_rules {
         let duplicate_count = expected_rules - stats.qb_rules_generated;
-        log::info!("\n重复作品处理:");
+        log::info!("重复作品处理:");
         log::info!("  - 检测到 {} 个重复作品（相同作品名称）", duplicate_count);
         log::info!("  - 重复作品已自动合并，只生成一个下载规则");
     }
 
-    log::info!("\nAI API使用统计:");
+    log::info!("AI API使用统计:");
     log::info!("  - AI请求次数: {}", stats.ai_requests_count);
     log::info!("  - 输入Token总数: {}", stats.ai_input_tokens);
     log::info!("  - 输出Token总数: {}", stats.ai_output_tokens);
@@ -190,7 +190,7 @@ pub fn generate_statistics_report(stats: &Statistics, bangumi_results: &[Bangumi
         stats.ai_input_tokens + stats.ai_output_tokens
     );
 
-    log::info!("\n未找到Bangumi信息的作品列表:");
+    log::info!("未找到Bangumi信息的作品列表:");
     let mut not_found_count = 0;
     for result in bangumi_results {
         if result.bangumi_id.is_none() {

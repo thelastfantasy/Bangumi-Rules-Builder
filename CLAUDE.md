@@ -288,3 +288,64 @@ debug_date_matching.rs  # Date debugging tools
   - File copy conflicts (source and destination are the same)
   - PyInstaller dependency resolution
   - Cross-platform executable naming conventions
+
+## Release Workflow
+
+### Release Process
+- **Manual Trigger**: Releases are manually triggered by user request (e.g., "发布0.1.1版本")
+- **Tag-based Automation**: Creating and pushing a tag automatically triggers GitHub Actions to build and release
+- **Version Management**: User specifies the exact version number to release
+
+### Release Checklist
+Before creating a release, always:
+
+1. **Check for Open PRs**:
+   ```bash
+   gh pr list --state open
+   ```
+   - If there are open PRs, pause and ask user if they should be merged before release
+   - Some releases may intentionally include multiple PRs
+
+2. **Version Conflict Check**:
+   ```bash
+   gh release list
+   ```
+   - If the requested version already exists on GitHub, you must:
+     - Delete the existing remote tag: `git push --delete origin vX.X.X`
+     - Delete the existing release: `gh release delete vX.X.X`
+     - Then create the new release
+
+3. **Update Cargo.toml Version**:
+   - Always update the version in `Cargo.toml` to match the release version
+   - This ensures the built binaries have the correct version information
+
+### Release Commands
+```bash
+# Check for open PRs
+gh pr list --state open
+
+# Check existing releases
+gh release list
+
+# Delete existing release (if needed)
+gh release delete vX.X.X
+
+# Delete existing tag (if needed)
+git push --delete origin vX.X.X
+
+# Update Cargo.toml version
+# Then commit and push changes
+
+# Create and push tag
+git tag vX.X.X
+git push origin vX.X.X
+
+# Create release (optional - tag push triggers automation)
+gh release create vX.X.X --title "Version X.X.X" --notes "Release notes..."
+```
+
+### Important Notes
+- **Never Automatically Release**: Only create releases when explicitly requested by the user
+- **Version Override**: When a version already exists, always delete and recreate it
+- **PR Integration**: Some releases may intentionally bundle multiple PRs - always confirm with user
+- **Cargo.toml Sync**: Always ensure Cargo.toml version matches the release version

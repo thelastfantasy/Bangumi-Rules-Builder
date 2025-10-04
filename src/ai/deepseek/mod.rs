@@ -1,6 +1,8 @@
-use crate::models::{AiConfig, AiProvider, AiRequest, AiMessage, AiResponse, TableInfo, AnimeWork, Statistics};
-use std::env;
+use crate::models::{
+    AiConfig, AiMessage, AiProvider, AiRequest, AiResponse, AnimeWork, Statistics, TableInfo,
+};
 use indicatif::{ProgressBar, ProgressStyle};
+use std::env;
 
 pub async fn match_and_process_with_ai<'a>(
     description: &'a str,
@@ -55,8 +57,6 @@ pub async fn match_and_process_with_ai<'a>(
             .join("\n\n")
     );
 
-    println!("发送给AI的表格选择提示: {}", table_selection_prompt);
-
     let table_selection_request = AiRequest {
         model: ai_config.model.clone(),
         messages: vec![AiMessage {
@@ -88,7 +88,6 @@ pub async fn match_and_process_with_ai<'a>(
     let mut selected_table_index = 0;
     if let Some(choice) = api_response.choices.first() {
         let content = choice.message.content.trim();
-        println!("AI表格选择返回内容: {}", content);
 
         // 提取JSON内容，处理markdown代码块
         let json_content = if content.starts_with("```json") && content.ends_with("```") {
@@ -208,11 +207,7 @@ pub async fn match_and_process_with_ai<'a>(
                 for (i, work_data) in works_array.iter().enumerate() {
                     let batch_offset = batch_index * batch_size + i;
                     if batch_offset < raw_works.len()
-                        && let (
-                            Some(original_title),
-                            Some(cleaned_title),
-                            Some(keywords_array),
-                        ) = (
+                        && let (Some(original_title), Some(cleaned_title), Some(keywords_array)) = (
                             work_data["original_title"].as_str(),
                             work_data["cleaned_title"].as_str(),
                             work_data["keywords"].as_array(),

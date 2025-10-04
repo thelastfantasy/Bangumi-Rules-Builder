@@ -32,7 +32,7 @@ pub struct BatchMatchResult {
 impl From<&BangumiSubject> for CandidateWork {
     fn from(subject: &BangumiSubject) -> Self {
         // 从infobox中提取放映时间和别名
-        let air_date = extract_air_date_from_infobox(&subject.infobox);
+        let air_date = super::utils::extract_air_date_from_subject(subject);
         let aliases = crate::meta_providers::bangumi::extract_aliases_from_infobox(&subject.infobox);
 
         CandidateWork {
@@ -44,16 +44,4 @@ impl From<&BangumiSubject> for CandidateWork {
             score: None,
         }
     }
-}
-
-fn extract_air_date_from_infobox(infobox: &[crate::models::BangumiInfoboxItem]) -> Option<chrono::NaiveDate> {
-    for item in infobox {
-        if (item.key == "放送开始" || item.key == "开始")
-            && let serde_json::Value::String(date_str) = &item.value
-            && let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
-        {
-            return Some(date);
-        }
-    }
-    None
 }

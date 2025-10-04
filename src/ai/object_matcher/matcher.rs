@@ -19,6 +19,8 @@ pub async fn batch_match_works_with_ai(
     };
 
 
+    let batch_tasks_content = format_batch_match_tasks(source_works, candidate_works_map);
+
     let prompt = format!(
         r#"请为以下多个独立的匹配任务找到最合适的Bangumi作品。每个任务都是完全独立的，请不要混淆不同任务之间的信息。
 
@@ -51,7 +53,7 @@ pub async fn batch_match_works_with_ai(
 }}
 
 注意：如果没有高度匹配（confidence > 0.7），请返回null。"#,
-        format_batch_match_tasks(source_works, candidate_works_map)
+        batch_tasks_content
     );
 
     let request = AiRequest {
@@ -110,8 +112,6 @@ pub async fn batch_process_searches(
 ) -> Result<Vec<Option<u32>>, Box<dyn std::error::Error>> {
     let mut all_results = Vec::new();
 
-    // 输出开始智能匹配的文本
-    println!("🚀 开始智能匹配，共 {} 个搜索任务，分批大小: {}", search_tasks.len(), batch_size);
 
     // 分批处理
     for (batch_index, chunk) in search_tasks.chunks(batch_size).enumerate() {
@@ -165,18 +165,32 @@ fn format_batch_match_tasks(source_works: &[&AnimeWork], candidate_works_map: &[
 }
 
 fn format_candidate_works(candidate_works: &[CandidateWork]) -> String {
+    if candidate_works.is_empty() {
+        return "无候选作品".to_string();
+    }
+
     candidate_works
         .iter()
         .enumerate()
         .map(|(i, candidate)| {
+            let aliases_display = if candidate.aliases.is_empty() {
+                "无别名".to_string()
+            } else {
+                candidate.aliases
+                    .iter()
+                    .map(|alias| format!("『{}』", alias))
+                    .collect::<Vec<_>>()
+                    .join("、")
+            };
+
             format!(
-                "{}. [ID: {}] {} (中文: {}) (放映时间: {}) (别名: {:?})",
+                "{}. [ID: {}] 日文标题:『{}』 中文标题:『{}』 放映时间:『{}』 别名: {}",
                 i + 1,
                 candidate.bangumi_id,
                 candidate.japanese_title,
                 candidate.chinese_title,
                 candidate.air_date.as_deref().unwrap_or("未知"),
-                candidate.aliases
+                aliases_display
             )
         })
         .collect::<Vec<_>>()

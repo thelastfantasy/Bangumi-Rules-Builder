@@ -25,7 +25,9 @@ jobs:
 
     - name: Run tests
       shell: bash
-      run: cargo test
+      run: |
+        # 运行测试，警告不会导致测试失败
+        cargo test -- --nocapture
 
     - name: Check code
       shell: bash

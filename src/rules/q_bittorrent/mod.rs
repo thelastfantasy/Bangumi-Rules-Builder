@@ -1,4 +1,5 @@
 use crate::models::{BangumiResult, QBRule, TorrentParams, RuleGenerationResult};
+use std::path::PathBuf;
 
 fn sanitize_work_name(work_name: &str) -> String {
     let mut sanitized = work_name.to_string();
@@ -36,6 +37,8 @@ pub fn generate_qb_rules(
     root_path: &str,
     season_name: &str,
 ) -> Result<RuleGenerationResult, Box<dyn std::error::Error>> {
+    // 使用 PathBuf 来标准化路径处理
+    let root_path_buf = PathBuf::from(root_path);
     let mut rules = serde_json::Map::new();
     let mut failed_works = Vec::new();
 
@@ -81,8 +84,11 @@ pub fn generate_qb_rules(
         // 清理作品名称中的非法字符
         let sanitized_work_name = sanitize_work_name(&work_name);
 
-        // 构建保存路径
-        let save_path = format!(r"{}\{}\{}", root_path, season_name, sanitized_work_name);
+        // 使用 PathBuf 构建保存路径，确保跨平台兼容性
+        let save_path_buf = root_path_buf.join(season_name).join(&sanitized_work_name);
+
+        // 转换为字符串，保持当前格式
+        let save_path = save_path_buf.to_string_lossy().to_string();
         let save_path_forward = save_path.replace("\\", "/");
 
         // 创建规则

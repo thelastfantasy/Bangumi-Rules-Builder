@@ -101,6 +101,8 @@ This tool automates the process of creating download rules for new anime seasons
 - **tokio**: Async runtime
 - **regex**: Pattern matching
 - **chrono**: Date/time handling
+- **log/env_logger/colored**: Logging system with colored output
+- **indicatif**: Progress bars
 
 ### Building and Testing
 ```bash
@@ -116,6 +118,7 @@ cargo check
 # Run specific test modules
 cargo test test_workflow_with_mock_data
 cargo test test_search_bangumi_with_keyword_logic
+cargo test test_logger_functionality
 
 # IMPORTANT: Do NOT automatically run the full program with `cargo run`
 # The program performs web scraping and multiple API calls which can take 5-10 minutes
@@ -127,12 +130,26 @@ cargo test test_search_bangumi_with_keyword_logic
 - Use `#[serde(rename)]` for external API compatibility
 - Document public functions and structs
 - Handle errors with `Result<_, Box<dyn std::error::Error>>`
+- **Testing**: All tests should be created in the `tests` module within `main.rs`, not in separate files
 
 ## File Structure
 
 ```
 src/
-├── main.rs              # Main application logic
+├── main.rs              # Main application logic and tests
+├── logger.rs            # Custom logging system implementation
+├── models.rs            # Data structures and types
+├── sites/
+│   └── kansou.rs       # Kansou.me site processing
+├── ai/
+│   └── object_matcher/
+│       └── matcher.rs  # AI-powered work matching
+├── meta_providers/
+│   └── bangumi/
+│       └── mod.rs      # Bangumi API integration
+├── rules/
+│   └── q_bittorrent.rs # qBittorrent rule generation
+└── utils.rs            # Utility functions
 Cargo.toml              # Project dependencies
 tasks.json              # Processing configuration
 rules.json              # Generated qBittorrent rules
@@ -171,8 +188,9 @@ debug_date_matching.rs  # Date debugging tools
 
 - Comprehensive error propagation with `?` operator
 - Fallback mechanisms when APIs fail
-- Detailed logging for debugging
 - Graceful degradation when Bangumi data unavailable
+- **Custom logging system** with colored output and local time formatting
+- Progress bar compatible (errors/warnings use stderr)
 
 ## Testing Strategy
 
@@ -181,11 +199,14 @@ debug_date_matching.rs  # Date debugging tools
 - Table extraction and parsing
 - Season name extraction
 - Mock API responses
+- Logging system functionality (`test_logger_functionality`)
 
 ### Integration Tests
 - Full workflow with mock data
 - Actual API calls (marked with `#[tokio::test]`)
 - Error scenario testing
+- Bangumi API search and matching
+- AI batch processing
 
 ## Common Development Tasks
 

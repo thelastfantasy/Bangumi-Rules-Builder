@@ -68,10 +68,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use crate::meta_providers::bangumi::{search_bangumi_for_works, search_bangumi_with_keyword};
     use crate::models::AnimeWork;
+    use crate::logger;
 
     #[tokio::test]
     async fn test_specific_work() -> Result<(), Box<dyn std::error::Error>> {
-        println!("\n🧪 测试特定作品的Bangumi搜索...");
+        log::info!("🧪 测试特定作品的Bangumi搜索...");
 
         // 创建测试作品数据
         let test_work = AnimeWork {
@@ -89,29 +90,29 @@ mod tests {
             ],
         };
 
-        println!("测试作品: {}", test_work.cleaned_title);
-        println!("关键词数量: {}", test_work.keywords.len());
-        println!("关键词列表: {:?}", test_work.keywords);
+        log::info!("测试作品: {}", test_work.cleaned_title);
+        log::info!("关键词数量: {}", test_work.keywords.len());
+        log::debug!("关键词列表: {:?}", test_work.keywords);
 
         // 测试搜索
         let results = search_bangumi_for_works(&[test_work]).await?;
 
         if let Some(result) = results.first() {
-            println!("搜索结果: {:?}", result);
+            log::debug!("搜索结果: {:?}", result);
             if result.bangumi_id.is_some() {
-                println!("✅ 成功找到Bangumi信息!");
-                println!("   Bangumi ID: {}", result.bangumi_id.unwrap());
-                println!("   中文名称: {:?}", result.chinese_name);
-                println!("   别名: {:?}", result.aliases);
+                log::info!("✅ 成功找到Bangumi信息!");
+                log::info!("   Bangumi ID: {}", result.bangumi_id.unwrap());
+                log::info!("   中文名称: {:?}", result.chinese_name);
+                log::info!("   别名: {:?}", result.aliases);
             } else {
-                println!("❌ 未找到Bangumi信息");
-                println!("⚠️ 问题分析:");
-                println!("   - 关键词测试显示 '青のミブロ' 能找到作品 (ID: 454630)");
-                println!("   - 但完整作品搜索时没有匹配成功");
-                println!("   - 可能原因: 匹配阈值过高或日期过滤问题");
+                log::warn!("❌ 未找到Bangumi信息");
+                log::debug!("⚠️ 问题分析:");
+                log::debug!("   - 关键词测试显示 '青のミブロ' 能找到作品 (ID: 454630)");
+                log::debug!("   - 但完整作品搜索时没有匹配成功");
+                log::debug!("   - 可能原因: 匹配阈值过高或日期过滤问题");
             }
         } else {
-            println!("❌ 没有搜索结果");
+            log::warn!("❌ 没有搜索结果");
         }
 
         Ok(())
@@ -119,82 +120,82 @@ mod tests {
 
     #[tokio::test]
     async fn test_specific_keywords() -> Result<(), Box<dyn std::error::Error>> {
-        println!("\n🧪 测试特定关键词的Bangumi搜索...");
+        log::info!("🧪 测试特定关键词的Bangumi搜索...");
         let client = reqwest::Client::new();
 
         // 测试 "青のミブロ" 关键词
-        println!("\n📝 测试关键词: 青のミブロ 第二期 芹沢暗殺編");
+        log::info!("📝 测试关键词: 青のミブロ 第二期 芹沢暗殺編");
         let subjects =
             search_bangumi_with_keyword(&client, "青のミブロ 第二期 芹沢暗殺編", &None).await?;
         if !subjects.is_empty() {
             let subject = &subjects[0];
-            println!("✅ 成功找到作品: {}", subject.name);
-            println!("   Bangumi ID: {}", subject.id);
-            println!("   中文名称: {}", subject.name_cn);
+            log::info!("✅ 成功找到作品: {}", subject.name);
+            log::info!("   Bangumi ID: {}", subject.id);
+            log::info!("   中文名称: {}", subject.name_cn);
         } else {
-            println!("❌ 未找到作品");
+            log::warn!("❌ 未找到作品");
         }
 
         // 测试 "SHIBUYA HACHI" 关键词
-        println!("\n📝 测试关键词: SHIBUYA HACHI 第4クール");
+        log::info!("📝 测试关键词: SHIBUYA HACHI 第4クール");
         let subjects =
             search_bangumi_with_keyword(&client, "SHIBUYA HACHI 第4クール", &None).await?;
         if !subjects.is_empty() {
             let subject = &subjects[0];
-            println!("✅ 成功找到作品: {}", subject.name);
-            println!("   Bangumi ID: {}", subject.id);
-            println!("   中文名称: {}", subject.name_cn);
+            log::info!("✅ 成功找到作品: {}", subject.name);
+            log::info!("   Bangumi ID: {}", subject.id);
+            log::info!("   中文名称: {}", subject.name_cn);
         } else {
-            println!("❌ 未找到作品");
+            log::warn!("❌ 未找到作品");
         }
 
         // 测试 "Ao no Miburo" 关键词
-        println!("\n📝 测试关键词: Ao no Miburo");
+        log::info!("📝 测试关键词: Ao no Miburo");
         let subjects = search_bangumi_with_keyword(&client, "Ao no Miburo", &None).await?;
         if !subjects.is_empty() {
             let subject = &subjects[0];
-            println!("✅ 成功找到作品: {}", subject.name);
-            println!("   Bangumi ID: {}", subject.id);
-            println!("   中文名称: {}", subject.name_cn);
+            log::info!("✅ 成功找到作品: {}", subject.name);
+            log::info!("   Bangumi ID: {}", subject.id);
+            log::info!("   中文名称: {}", subject.name_cn);
         } else {
-            println!("❌ 未找到作品");
+            log::warn!("❌ 未找到作品");
         }
 
         // 测试 "SANDA" 关键词
-        println!("\n📝 测试关键词: SANDA");
+        log::info!("📝 测试关键词: SANDA");
         let subjects = search_bangumi_with_keyword(&client, "SANDA", &None).await?;
         if !subjects.is_empty() {
             let subject = &subjects[0];
-            println!("✅ 成功找到作品: {}", subject.name);
-            println!("   Bangumi ID: {}", subject.id);
-            println!("   中文名称: {}", subject.name_cn);
+            log::info!("✅ 成功找到作品: {}", subject.name);
+            log::info!("   Bangumi ID: {}", subject.id);
+            log::info!("   中文名称: {}", subject.name_cn);
         } else {
-            println!("❌ 未找到作品");
+            log::warn!("❌ 未找到作品");
         }
 
         // 测试 "SANDA サンダ" 关键词
-        println!("\n📝 测试关键词: SANDA サンダ");
+        log::info!("📝 测试关键词: SANDA サンダ");
         let subjects = search_bangumi_with_keyword(&client, "SANDA サンダ", &None).await?;
         if !subjects.is_empty() {
             let subject = &subjects[0];
-            println!("✅ 成功找到作品: {}", subject.name);
-            println!("   Bangumi ID: {}", subject.id);
-            println!("   中文名称: {}", subject.name_cn);
+            log::info!("✅ 成功找到作品: {}", subject.name);
+            log::info!("   Bangumi ID: {}", subject.id);
+            log::info!("   中文名称: {}", subject.name_cn);
         } else {
-            println!("❌ 未找到作品");
+            log::warn!("❌ 未找到作品");
         }
 
         // 测试 "SANDA" 关键词带日期过滤
-        println!("\n📝 测试关键词: SANDA (带日期过滤 2025-10-03)");
+        log::info!("📝 测试关键词: SANDA (带日期过滤 2025-10-03)");
         let sanda_date = chrono::NaiveDate::from_ymd_opt(2025, 10, 3);
         let subjects = search_bangumi_with_keyword(&client, "SANDA", &sanda_date).await?;
         if !subjects.is_empty() {
             let subject = &subjects[0];
-            println!("✅ 成功找到作品: {}", subject.name);
-            println!("   Bangumi ID: {}", subject.id);
-            println!("   中文名称: {}", subject.name_cn);
+            log::info!("✅ 成功找到作品: {}", subject.name);
+            log::info!("   Bangumi ID: {}", subject.id);
+            log::info!("   中文名称: {}", subject.name_cn);
         } else {
-            println!("❌ 未找到作品 - 日期过滤可能太严格");
+            log::warn!("❌ 未找到作品 - 日期过滤可能太严格");
         }
 
         Ok(())
@@ -202,7 +203,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_without_date_filter() -> Result<(), Box<dyn std::error::Error>> {
-        println!("\n🧪 测试无日期过滤的Bangumi搜索...");
+        log::info!("🧪 测试无日期过滤的Bangumi搜索...");
 
         // 创建测试作品数据，但不设置日期
         let test_work = AnimeWork {
@@ -220,25 +221,25 @@ mod tests {
             ],
         };
 
-        println!("测试作品: {}", test_work.cleaned_title);
-        println!("关键词数量: {}", test_work.keywords.len());
-        println!("无日期过滤");
+        log::info!("测试作品: {}", test_work.cleaned_title);
+        log::info!("关键词数量: {}", test_work.keywords.len());
+        log::info!("无日期过滤");
 
         // 测试搜索
         let results = search_bangumi_for_works(&[test_work]).await?;
 
         if let Some(result) = results.first() {
-            println!("搜索结果: {:?}", result);
+            log::debug!("搜索结果: {:?}", result);
             if result.bangumi_id.is_some() {
-                println!("✅ 成功找到Bangumi信息!");
-                println!("   Bangumi ID: {}", result.bangumi_id.unwrap());
-                println!("   中文名称: {:?}", result.chinese_name);
-                println!("   别名: {:?}", result.aliases);
+                log::info!("✅ 成功找到Bangumi信息!");
+                log::info!("   Bangumi ID: {}", result.bangumi_id.unwrap());
+                log::info!("   中文名称: {:?}", result.chinese_name);
+                log::info!("   别名: {:?}", result.aliases);
             } else {
-                println!("❌ 未找到Bangumi信息");
+                log::warn!("❌ 未找到Bangumi信息");
             }
         } else {
-            println!("❌ 没有搜索结果");
+            log::warn!("❌ 没有搜索结果");
         }
 
         Ok(())
@@ -246,7 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ai_individual_matching() -> Result<(), Box<dyn std::error::Error>> {
-        println!("\n🧪 测试AI单个匹配...");
+        log::info!("🧪 测试AI单个匹配...");
 
         use crate::ai::object_matcher::{CandidateWork, batch_match_works_with_ai};
         use crate::meta_providers::bangumi::search_bangumi_for_works;
@@ -255,7 +256,7 @@ mod tests {
         let ai_config = AiConfig::deepseek();
 
         // 测试案例1: 破产富豪
-        println!("\n📝 测试案例1: 破产富豪");
+        log::info!("📝 测试案例1: 破产富豪");
         let anime_work1 = AnimeWork {
             original_title: "破産富豪".to_string(),
             cleaned_title: "破产富豪".to_string(),
@@ -284,17 +285,17 @@ mod tests {
             })
             .collect();
 
-        println!("找到 {} 个候选作品", candidate_works1.len());
+        log::info!("找到 {} 个候选作品", candidate_works1.len());
         let result1 =
             batch_match_works_with_ai(&[&anime_work1], &[&candidate_works1], &ai_config).await?;
         let result1 = result1.first().copied().flatten();
-        println!("匹配结果: {:?}", result1);
-        println!("预期结果: None");
+        log::debug!("匹配结果: {:?}", result1);
+        log::debug!("预期结果: None");
         assert_eq!(result1, None, "破产富豪应该匹配不到任何结果");
-        println!("✅ 匹配结果符合预期");
+        log::info!("✅ 匹配结果符合预期");
 
         // 测试案例
-        println!("\n📝 测试案例");
+        log::info!("📝 测试案例");
         let anime_work2 = AnimeWork {
             original_title: "ある日、お姫様になってしまった件について".to_string(),
             cleaned_title: "某天成为公主".to_string(),
@@ -326,21 +327,21 @@ mod tests {
             })
             .collect();
 
-        println!("找到 {} 个候选作品", candidate_works2.len());
+        log::info!("找到 {} 个候选作品", candidate_works2.len());
         let result2 =
             batch_match_works_with_ai(&[&anime_work2], &[&candidate_works2], &ai_config).await?;
         let result2 = result2.first().copied().flatten();
-        println!("匹配结果: {:?}", result2);
-        println!("预期结果: Some(434807)");
+        log::debug!("匹配结果: {:?}", result2);
+        log::debug!("预期结果: Some(434807)");
         assert_eq!(
             result2,
             Some(434807),
             "某天成为公主应该匹配到魔法公主的小烦恼 (ID: 434807)"
         );
-        println!("✅ 匹配结果符合预期");
+        log::info!("✅ 匹配结果符合预期");
 
         // 测试案例3: 罗小黑战记
-        println!("\n📝 测试案例3: 罗小黑战记");
+        log::info!("📝 测试案例3: 罗小黑战记");
         let anime_work3 = AnimeWork {
             original_title: "羅小黒戦記".to_string(),
             cleaned_title: "罗小黑战记".to_string(),
@@ -371,17 +372,17 @@ mod tests {
             })
             .collect();
 
-        println!("找到 {} 个候选作品", candidate_works3.len());
+        log::info!("找到 {} 个候选作品", candidate_works3.len());
         let result3 =
             batch_match_works_with_ai(&[&anime_work3], &[&candidate_works3], &ai_config).await?;
         let result3 = result3.first().copied().flatten();
-        println!("匹配结果: {:?}", result3);
-        println!("预期结果: Some(442114)");
+        log::debug!("匹配结果: {:?}", result3);
+        log::debug!("预期结果: Some(442114)");
         assert_eq!(result3, Some(442114), "罗小黑战记应该匹配到 (ID: 442114)");
-        println!("✅ 匹配结果符合预期");
+        log::info!("✅ 匹配结果符合预期");
 
         // 测试案例4: 异世界四重奏3
-        println!("\n📝 测试案例4: 异世界四重奏3");
+        log::info!("📝 测试案例4: 异世界四重奏3");
         let anime_work4 = AnimeWork {
             original_title: "異世界かるてっと3".to_string(),
             cleaned_title: "異世界かるてっと3".to_string(),
@@ -417,21 +418,21 @@ mod tests {
             })
             .collect();
 
-        println!("找到 {} 个候选作品", candidate_works4.len());
+        log::info!("找到 {} 个候选作品", candidate_works4.len());
         let result4 =
             batch_match_works_with_ai(&[&anime_work4], &[&candidate_works4], &ai_config).await?;
         let result4 = result4.first().copied().flatten();
-        println!("匹配结果: {:?}", result4);
-        println!("预期结果: Some(564421)");
+        log::debug!("匹配结果: {:?}", result4);
+        log::debug!("预期结果: Some(564421)");
         assert_eq!(
             result4,
             Some(564421),
             "异世界四重奏3应该匹配到异世界四重奏 第三季 (ID: 564421)"
         );
-        println!("✅ 匹配结果符合预期");
+        log::info!("✅ 匹配结果符合预期");
 
         // 测试案例5: 怪物弹珠 Dead Death Reloaded
-        println!("\n📝 测试案例5: 怪物弹珠 Dead Death Reloaded");
+        log::info!("📝 测试案例5: 怪物弹珠 Dead Death Reloaded");
         let anime_work5 = AnimeWork {
             original_title: "モンスターストライク デッドバースリローデッド".to_string(),
             cleaned_title: "モンスターストライク デッドバースリローデッド".to_string(),
@@ -467,25 +468,25 @@ mod tests {
             })
             .collect();
 
-        println!("找到 {} 个候选作品", candidate_works5.len());
+        log::info!("找到 {} 个候选作品", candidate_works5.len());
         let result5 =
             batch_match_works_with_ai(&[&anime_work5], &[&candidate_works5], &ai_config).await?;
         let result5 = result5.first().copied().flatten();
-        println!("匹配结果: {:?}", result5);
-        println!("预期结果: Some(570330)");
+        log::debug!("匹配结果: {:?}", result5);
+        log::debug!("预期结果: Some(570330)");
         assert_eq!(
             result5,
             Some(570330),
             "怪物弹珠 Dead Death Reloaded应该匹配到怪物弹珠 DEADVERSE RELOADED (ID: 570330)"
         );
-        println!("✅ 匹配结果符合预期");
+        log::info!("✅ 匹配结果符合预期");
 
         Ok(())
     }
 
     #[tokio::test]
     async fn test_ai_batch_matching() -> Result<(), Box<dyn std::error::Error>> {
-        println!("\n🧪 测试AI批量匹配...");
+        log::info!("\n🧪 测试AI批量匹配...");
 
         use crate::meta_providers::bangumi::search_bangumi_for_works;
         use crate::models::AnimeWork;
@@ -648,16 +649,16 @@ mod tests {
             }, // 该数据应该匹配到最后にひとつだけお願いしてもよろしいでしょうか，bangumi_id: 513348
         ];
 
-        println!("准备批量测试数据，共 {} 个作品", source_works.len());
+        log::info!("准备批量测试数据，共 {} 个作品", source_works.len());
         for (i, work) in source_works.iter().enumerate() {
-            println!(
+            log::info!(
                 "  作品{}: {} (关键词: {:?})",
                 i, work.cleaned_title, work.keywords
             );
         }
 
         // 使用search_bangumi_for_works获取所有Bangumi匹配结果
-        println!("\n🚀 执行Bangumi搜索和AI匹配...");
+        log::info!("\n🚀 执行Bangumi搜索和AI匹配...");
         let bangumi_results = search_bangumi_for_works(&source_works).await?;
 
         // 直接从Bangumi结果中提取匹配的Bangumi ID
@@ -667,7 +668,7 @@ mod tests {
             .collect();
 
         // 第三步：验证匹配结果是否符合预期
-        println!("\n📊 AI批量匹配结果验证:");
+        log::info!("\n📊 AI批量匹配结果验证:");
         let mut test_passed = true;
 
         // 预期结果映射
@@ -693,37 +694,37 @@ mod tests {
             .enumerate()
         {
             let work = &source_works[i];
-            println!("\n  作品{}: '{}'", i, work.cleaned_title);
-            println!("    预期结果: {:?}", expected);
-            println!("    实际结果: {:?}", result);
+            log::info!("\n  作品{}: '{}'", i, work.cleaned_title);
+            log::info!("    预期结果: {:?}", expected);
+            log::info!("    实际结果: {:?}", result);
 
             if result == expected {
-                println!("    ✅ 匹配结果符合预期");
+                log::info!("    ✅ 匹配结果符合预期");
                 if let Some(bangumi_id) = result {
-                    println!("      匹配到Bangumi ID: {}", bangumi_id);
+                    log::info!("      匹配到Bangumi ID: {}", bangumi_id);
                 }
             } else {
-                println!("    ❌ 匹配结果不符合预期");
+                log::info!("    ❌ 匹配结果不符合预期");
                 test_passed = false;
             }
         }
 
         // 输出整体测试结果
-        println!("\n📈 批量匹配测试总结:");
-        println!("   总作品数: {}", source_works.len());
-        println!(
+        log::info!("\n📈 批量匹配测试总结:");
+        log::info!("   总作品数: {}", source_works.len());
+        log::info!(
             "   预期匹配: {} 个作品",
             expected_results.iter().filter(|r| r.is_some()).count()
         );
-        println!(
+        log::info!(
             "   实际匹配: {} 个作品",
             batch_results.iter().filter(|r| r.is_some()).count()
         );
 
         if test_passed {
-            println!("   ✅ 所有匹配结果都符合预期，测试通过！");
+            log::info!("   ✅ 所有匹配结果都符合预期，测试通过！");
         } else {
-            println!("   ❌ 部分匹配结果不符合预期，测试失败！");
+            log::info!("   ❌ 部分匹配结果不符合预期，测试失败！");
             return Err("AI批量匹配测试失败".into());
         }
 
@@ -737,42 +738,60 @@ mod tests {
         let isekai_date_range = chrono::NaiveDate::from_ymd_opt(2025, 10, 13);
         let monster_date_range = chrono::NaiveDate::from_ymd_opt(2025, 10, 21);
 
-        println!("\n🔍 测试搜索: 異世界かるてっと3");
+        log::info!("\n🔍 测试搜索: 異世界かるてっと3");
         let subjects =
             search_bangumi_with_keyword(&client, "異世界かるてっと3", &isekai_date_range).await?;
-        println!("搜索结果数量: {}", subjects.len());
+        log::info!("搜索结果数量: {}", subjects.len());
         for subject in &subjects {
-            println!("  作品: {} (ID: {})", subject.name, subject.id);
+            log::info!("  作品: {} (ID: {})", subject.name, subject.id);
         }
 
-        println!("\n🔍 测试搜索: 異世界かるてっと");
+        log::info!("\n🔍 测试搜索: 異世界かるてっと");
         let subjects2 =
             search_bangumi_with_keyword(&client, "異世界かるてっと", &isekai_date_range).await?;
-        println!("搜索结果数量: {}", subjects2.len());
+        log::info!("搜索结果数量: {}", subjects2.len());
         for subject in &subjects2 {
-            println!("  作品: {} (ID: {})", subject.name, subject.id);
+            log::info!("  作品: {} (ID: {})", subject.name, subject.id);
         }
 
-        println!("\n🔍 测试搜索: 异世界四重奏");
+        log::info!("\n🔍 测试搜索: 异世界四重奏");
         let subjects3 =
             search_bangumi_with_keyword(&client, "异世界四重奏", &isekai_date_range).await?;
-        println!("搜索结果数量: {}", subjects3.len());
+        log::info!("搜索结果数量: {}", subjects3.len());
         for subject in &subjects3 {
-            println!("  作品: {} (ID: {})", subject.name, subject.id);
+            log::info!("  作品: {} (ID: {})", subject.name, subject.id);
         }
 
-        println!("\n🔍 测试搜索: モンスターストライク デッドバースリローデッド");
+        log::info!("\n🔍 测试搜索: モンスターストライク デッドバースリローデッド");
         let subjects4 = search_bangumi_with_keyword(
             &client,
             "モンスターストライク デッドバースリローデッド",
             &monster_date_range,
         )
         .await?;
-        println!("搜索结果数量: {}", subjects4.len());
+        log::info!("搜索结果数量: {}", subjects4.len());
         for subject in &subjects4 {
-            println!("  作品: {} (ID: {})", subject.name, subject.id);
+            log::info!("  作品: {} (ID: {})", subject.name, subject.id);
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_logger_functionality() -> Result<(), Box<dyn std::error::Error>> {
+        // 测试日志系统功能
+        log::info!("\n🧪 测试日志系统功能...");
+
+        // 测试初始化
+        logger::init_default()?;
+
+        // 测试各种日志输出
+        log::debug!("调试信息测试");
+        log::info!("普通信息测试");
+        log::warn!("警告信息测试");
+        log::error!("错误信息测试");
+
+        log::info!("✅ 日志系统功能测试完成");
         Ok(())
     }
 }

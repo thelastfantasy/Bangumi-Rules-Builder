@@ -1,5 +1,6 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum SiteType {
@@ -55,6 +56,13 @@ pub struct Task {
     pub description: String,
     pub site: SiteType,
     pub root_path: String,
+}
+
+impl Task {
+    /// 获取标准化的根路径
+    pub fn normalized_root_path(&self) -> PathBuf {
+        PathBuf::from(&self.root_path)
+    }
 }
 
 #[derive(Debug)]

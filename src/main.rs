@@ -486,7 +486,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ai_batch_matching() -> Result<(), Box<dyn std::error::Error>> {
-        log::info!("\n🧪 测试AI批量匹配...");
+        log::info!("🧪 测试AI批量匹配...");
 
         use crate::meta_providers::bangumi::search_bangumi_for_works;
         use crate::models::AnimeWork;
@@ -658,7 +658,7 @@ mod tests {
         }
 
         // 使用search_bangumi_for_works获取所有Bangumi匹配结果
-        log::info!("\n🚀 执行Bangumi搜索和AI匹配...");
+        log::info!("🚀 执行Bangumi搜索和AI匹配...");
         let bangumi_results = search_bangumi_for_works(&source_works).await?;
 
         // 直接从Bangumi结果中提取匹配的Bangumi ID
@@ -668,7 +668,7 @@ mod tests {
             .collect();
 
         // 第三步：验证匹配结果是否符合预期
-        log::info!("\n📊 AI批量匹配结果验证:");
+        log::info!("📊 AI批量匹配结果验证:");
         let mut test_passed = true;
 
         // 预期结果映射
@@ -694,7 +694,7 @@ mod tests {
             .enumerate()
         {
             let work = &source_works[i];
-            log::info!("\n  作品{}: '{}'", i, work.cleaned_title);
+            log::info!("  作品{}: '{}'", i, work.cleaned_title);
             log::info!("    预期结果: {:?}", expected);
             log::info!("    实际结果: {:?}", result);
 
@@ -710,7 +710,7 @@ mod tests {
         }
 
         // 输出整体测试结果
-        log::info!("\n📈 批量匹配测试总结:");
+        log::info!("📈 批量匹配测试总结:");
         log::info!("   总作品数: {}", source_works.len());
         log::info!(
             "   预期匹配: {} 个作品",
@@ -738,7 +738,7 @@ mod tests {
         let isekai_date_range = chrono::NaiveDate::from_ymd_opt(2025, 10, 13);
         let monster_date_range = chrono::NaiveDate::from_ymd_opt(2025, 10, 21);
 
-        log::info!("\n🔍 测试搜索: 異世界かるてっと3");
+        log::info!("🔍 测试搜索: 異世界かるてっと3");
         let subjects =
             search_bangumi_with_keyword(&client, "異世界かるてっと3", &isekai_date_range).await?;
         log::info!("搜索结果数量: {}", subjects.len());
@@ -746,7 +746,7 @@ mod tests {
             log::info!("  作品: {} (ID: {})", subject.name, subject.id);
         }
 
-        log::info!("\n🔍 测试搜索: 異世界かるてっと");
+        log::info!("🔍 测试搜索: 異世界かるてっと");
         let subjects2 =
             search_bangumi_with_keyword(&client, "異世界かるてっと", &isekai_date_range).await?;
         log::info!("搜索结果数量: {}", subjects2.len());
@@ -754,7 +754,7 @@ mod tests {
             log::info!("  作品: {} (ID: {})", subject.name, subject.id);
         }
 
-        log::info!("\n🔍 测试搜索: 异世界四重奏");
+        log::info!("🔍 测试搜索: 异世界四重奏");
         let subjects3 =
             search_bangumi_with_keyword(&client, "异世界四重奏", &isekai_date_range).await?;
         log::info!("搜索结果数量: {}", subjects3.len());
@@ -762,7 +762,7 @@ mod tests {
             log::info!("  作品: {} (ID: {})", subject.name, subject.id);
         }
 
-        log::info!("\n🔍 测试搜索: モンスターストライク デッドバースリローデッド");
+        log::info!("🔍 测试搜索: モンスターストライク デッドバースリローデッド");
         let subjects4 = search_bangumi_with_keyword(
             &client,
             "モンスターストライク デッドバースリローデッド",
@@ -780,7 +780,7 @@ mod tests {
     #[test]
     fn test_logger_functionality() -> Result<(), Box<dyn std::error::Error>> {
         // 测试日志系统功能
-        log::info!("\n🧪 测试日志系统功能...");
+        log::info!("🧪 测试日志系统功能...");
 
         // 测试初始化
         logger::init_default()?;

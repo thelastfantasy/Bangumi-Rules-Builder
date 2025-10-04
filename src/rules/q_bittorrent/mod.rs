@@ -1,5 +1,4 @@
-use crate::models::{BangumiResult, QBRule, TorrentParams, RuleGenerationResult};
-use std::path::PathBuf;
+use crate::models::{BangumiResult, QBRule, TorrentParams, RuleGenerationResult, Task};
 
 fn sanitize_work_name(work_name: &str) -> String {
     let mut sanitized = work_name.to_string();
@@ -34,11 +33,11 @@ fn sanitize_work_name(work_name: &str) -> String {
 
 pub fn generate_qb_rules(
     bangumi_results: &[BangumiResult],
-    root_path: &str,
+    task: &Task,
     season_name: &str,
 ) -> Result<RuleGenerationResult, Box<dyn std::error::Error>> {
-    // 使用 PathBuf 来标准化路径处理
-    let root_path_buf = PathBuf::from(root_path);
+    // 使用 Task 的 normalized_root_path 方法来获取标准化的路径
+    let root_path_buf = task.normalized_root_path();
     let mut rules = serde_json::Map::new();
     let mut failed_works = Vec::new();
 

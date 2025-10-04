@@ -55,16 +55,25 @@ pub async fn search_bangumi_for_works(
         let mut all_candidate_works: Vec<CandidateWork> = Vec::new();
 
         for keyword in search_keywords {
-            let subjects = search_bangumi_with_keyword(&client, keyword, &work.air_date).await?;
-
-            if !subjects.is_empty() {
-                // 添加候选作品到集合中
-                for subject in subjects {
-                    let candidate = CandidateWork::from(&subject);
-                    // 检查是否已存在相同ID的候选作品
-                    if !all_candidate_works.iter().any(|c| c.bangumi_id == candidate.bangumi_id) {
-                        all_candidate_works.push(candidate);
+            match search_bangumi_with_keyword(&client, keyword, &work.air_date).await {
+                Ok(subjects) => {
+                    if !subjects.is_empty() {
+                        log::debug!("关键词 '{}' 找到 {} 个候选作品", keyword, subjects.len());
+                        // 添加候选作品到集合中
+                        for subject in subjects {
+                            let candidate = CandidateWork::from(&subject);
+                            // 检查是否已存在相同ID的候选作品
+                            if !all_candidate_works.iter().any(|c| c.bangumi_id == candidate.bangumi_id) {
+                                all_candidate_works.push(candidate);
+                            }
+                        }
+                    } else {
+                        log::debug!("关键词 '{}' 未找到候选作品", keyword);
                     }
+                }
+                Err(e) => {
+                    log::warn!("搜索关键词 '{}' 时发生错误: {}", keyword, e);
+                    // 继续处理其他关键词，不中断整个流程
                 }
             }
         }

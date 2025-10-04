@@ -65,15 +65,38 @@ pub async fn batch_match_works_with_ai(
     };
 
     let client = reqwest::Client::new();
-    let response = client
+
+    log::debug!("发送AI匹配请求，包含 {} 个任务", source_works.len());
+
+    let response = match client
         .post("https://api.deepseek.com/chat/completions")
         .header("Authorization", format!("Bearer {}", api_key))
         .header("Content-Type", "application/json")
         .json(&request)
         .send()
-        .await?;
+        .await {
+            Ok(response) => {
+                if response.status().is_success() {
+                    log::debug!("AI API请求成功，状态码: {}", response.status());
+                    response
+                } else {
+                    log::error!("AI API请求失败，状态码: {}", response.status());
+                    return Ok(vec![None; source_works.len()]);
+                }
+            }
+            Err(e) => {
+                log::error!("AI API请求网络错误: {}", e);
+                return Ok(vec![None; source_works.len()]);
+            }
+        };
 
-    let api_response: AiResponse = response.json().await?;
+    let api_response: AiResponse = match response.json().await {
+        Ok(response) => response,
+        Err(e) => {
+            log::error!("解析AI API响应失败: {}", e);
+            return Ok(vec![None; source_works.len()]);
+        }
+    };
 
     if let Some(choice) = api_response.choices.first() {
         let content = choice.message.content.trim();
@@ -124,12 +147,21 @@ pub async fn batch_process_searches(
             ));
         }
 
-        let batch_results = batch_match_works_with_ai(
+        match batch_match_works_with_ai(
             &chunk.iter().map(|(source, _)| source).collect::<Vec<_>>(),
             &chunk.iter().map(|(_, candidates)| candidates).collect::<Vec<_>>(),
             ai_config
-        ).await?;
-        all_results.extend(batch_results);
+        ).await {
+            Ok(batch_results) => {
+                all_results.extend(batch_results);
+                log::debug!("成功处理批次 {}，处理了 {} 个任务", batch_index + 1, chunk.len());
+            }
+            Err(e) => {
+                log::error!("处理批次 {} 时发生错误: {}", batch_index + 1, e);
+                // 如果AI匹配失败，为这个批次的所有任务返回None
+                all_results.extend(vec![None; chunk.len()]);
+            }
+        }
 
         // 更新进度条
         if let Some(pb) = progress_bar {

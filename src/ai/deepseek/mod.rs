@@ -110,12 +110,12 @@ pub async fn match_and_process_with_ai<'a>(
     }
 
     let matched_table = &tables[selected_table_index];
-    println!("选择的表格标题: {}", matched_table.title);
+    log::info!("选择的表格标题: {}", matched_table.title);
 
     // 步骤2: 解析表格获取实际作品
     let raw_works = crate::sites::kansou::parse_table_works(&matched_table.table_html)?;
     stats.total_works_from_table = raw_works.len();
-    println!("从表格中解析出 {} 个作品", raw_works.len());
+    log::info!("从表格中解析出 {} 个作品", raw_works.len());
 
     // 步骤3: 将实际作品分批发送给AI进行清理和关键字生成
     let batch_size = 20; // 每批处理20个作品
@@ -243,7 +243,7 @@ pub async fn match_and_process_with_ai<'a>(
 
     // 如果AI处理失败，使用原始作品
     if processed_works.is_empty() {
-        println!("AI作品处理失败，使用原始作品");
+        log::warn!("AI作品处理失败，使用原始作品");
         processed_works = raw_works.clone();
     }
 

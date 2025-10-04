@@ -5,15 +5,39 @@ use scraper::{Html, Selector};
 pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::Error>> {
     // 获取网页内容
     let url = "https://www.kansou.me/";
-    println!("正在获取网页内容: {}", url);
+    log::info!("正在获取网页内容: {}", url);
 
     let client = reqwest::Client::new();
-    let response = client.get(url).send().await?;
-    let html_content = response.text().await?;
+    let response = match client.get(url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                log::info!("成功获取网页内容，状态码: {}", response.status());
+                response
+            } else {
+                log::error!("获取网页内容失败，状态码: {}", response.status());
+                return Err(format!("HTTP请求失败，状态码: {}", response.status()).into());
+            }
+        }
+        Err(e) => {
+            log::error!("网络请求失败: {}", e);
+            return Err(e.into());
+        }
+    };
+
+    let html_content = match response.text().await {
+        Ok(content) => {
+            log::debug!("成功获取HTML内容，长度: {} 字节", content.len());
+            content
+        }
+        Err(e) => {
+            log::error!("读取响应内容失败: {}", e);
+            return Err(e.into());
+        }
+    };
 
     // 解析HTML提取表格和标题
     let tables = extract_tables_with_titles(&html_content)?;
-    println!("找到 {} 个表格", tables.len());
+    log::info!("找到 {} 个表格", tables.len());
 
     // 使用AI API智能匹配表格并处理作品
     let ai_config = crate::models::AiConfig::deepseek();
@@ -21,9 +45,9 @@ pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::
         crate::ai::deepseek::match_and_process_with_ai(&task.description, &tables, &ai_config).await?;
 
     if let Some((table, works)) = matched_table {
-        println!("匹配到的表格标题: {}", table.title);
-        println!("表格内容已暂存");
-        println!("提取到 {} 个作品", works.len());
+        log::info!("匹配到的表格标题: {}", table.title);
+        log::info!("表格内容已暂存");
+        log::info!("提取到 {} 个作品", works.len());
 
         // 搜索Bangumi API
         let bangumi_results = crate::meta_providers::bangumi::search_bangumi_for_works(&works).await?;
@@ -47,12 +71,12 @@ pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::
         std::fs::write(rules_file, serde_json::to_string_pretty(&rule_result.rules)?)?;
         stats.qb_rules_generated = rule_result.rules.as_object().unwrap().len();
         stats.qb_rules_failed = rule_result.failed_works.len();
-        println!("qBittorrent规则已生成到: {}", rules_file);
+        log::info!("qBittorrent规则已生成到: {}", rules_file);
 
         // 生成统计报告
         crate::utils::generate_statistics_report(&stats, &bangumi_results, &rule_result.failed_works);
     } else {
-        println!("未找到匹配的表格");
+        log::warn!("未找到匹配的表格");
     }
 
     Ok(())

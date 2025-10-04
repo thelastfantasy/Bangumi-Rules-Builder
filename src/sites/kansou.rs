@@ -66,7 +66,7 @@ pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::
         let season_name = extract_season_name_from_table_title(&table.title);
 
         // 生成qBittorrent规则
-        let rule_result = crate::rules::q_bittorrent::generate_qb_rules(&bangumi_results, &task.root_path, &season_name)?;
+        let rule_result = crate::rules::q_bittorrent::generate_qb_rules(&bangumi_results, task, &season_name)?;
         let rules_file = "qb_download_rules.json";
         std::fs::write(rules_file, serde_json::to_string_pretty(&rule_result.rules)?)?;
         stats.qb_rules_generated = rule_result.rules.as_object().unwrap().len();

@@ -1,6 +1,7 @@
 use std::fs;
 
 mod ai;
+mod logger;
 mod meta_providers;
 mod models;
 mod rules;
@@ -11,28 +12,55 @@ use crate::models::Task;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 读取tasks.json文件
-    let json_content = fs::read_to_string("tasks.json")?;
-    let task: Task = serde_json::from_str(&json_content)?;
+    // 初始化日志系统
+    logger::init_default()?;
+    log::info!("Bangumi规则生成器启动");
 
-    println!("任务描述: {}", task.description);
-    println!("站点: {}", task.site);
+    // 读取tasks.json文件
+    let json_content = match fs::read_to_string("tasks.json") {
+        Ok(content) => {
+            log::info!("成功读取配置文件 tasks.json");
+            content
+        }
+        Err(e) => {
+            log::error!("无法读取配置文件 tasks.json: {}", e);
+            return Err(e.into());
+        }
+    };
+
+    let task: Task = match serde_json::from_str(&json_content) {
+        Ok(task) => {
+            log::info!("成功解析配置文件");
+            task
+        }
+        Err(e) => {
+            log::error!("配置文件格式错误: {}", e);
+            return Err(e.into());
+        }
+    };
+
+    log::info!("任务描述: {}", task.description);
+    log::info!("站点: {}", task.site);
 
     match task.site {
         models::SiteType::Kansou => {
-            println!("处理kansou站点...");
+            log::info!("开始处理kansou站点...");
             sites::kansou::process_kansou_site(&task).await?;
+            log::info!("kansou站点处理完成");
         } // 未来添加其他站点支持
           // models::SiteType::ModelScope => {
-          //     println!("处理modelscope站点...");
+          //     log::info!("开始处理modelscope站点...");
           //     sites::modelscope::process_modelscope_site(&task).await?;
+          //     log::info!("modelscope站点处理完成");
           // }
           // models::SiteType::AnimeList => {
-          //     println!("处理animelist站点...");
+          //     log::info!("开始处理animelist站点...");
           //     sites::animelist::process_animelist_site(&task).await?;
+          //     log::info!("animelist站点处理完成");
           // }
     }
 
+    log::info!("Bangumi规则生成器运行完成");
     Ok(())
 }
 

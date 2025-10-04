@@ -5,11 +5,35 @@ use scraper::{Html, Selector};
 pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::Error>> {
     // 获取网页内容
     let url = "https://www.kansou.me/";
-    println!("正在获取网页内容: {}", url);
+    log::info!("正在获取网页内容: {}", url);
 
     let client = reqwest::Client::new();
-    let response = client.get(url).send().await?;
-    let html_content = response.text().await?;
+    let response = match client.get(url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                log::info!("成功获取网页内容，状态码: {}", response.status());
+                response
+            } else {
+                log::error!("获取网页内容失败，状态码: {}", response.status());
+                return Err(format!("HTTP请求失败，状态码: {}", response.status()).into());
+            }
+        }
+        Err(e) => {
+            log::error!("网络请求失败: {}", e);
+            return Err(e.into());
+        }
+    };
+
+    let html_content = match response.text().await {
+        Ok(content) => {
+            log::debug!("成功获取HTML内容，长度: {} 字节", content.len());
+            content
+        }
+        Err(e) => {
+            log::error!("读取响应内容失败: {}", e);
+            return Err(e.into());
+        }
+    };
 
     // 解析HTML提取表格和标题
     let tables = extract_tables_with_titles(&html_content)?;

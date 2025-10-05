@@ -113,9 +113,13 @@ pub async fn match_and_process_with_ai<'a>(
     log::info!("选择的表格标题: {}", matched_table.title);
 
     // 步骤2: 解析表格获取实际作品
-    let raw_works = crate::sites::kansou::parse_table_works(&matched_table.table_html)?;
+    let (raw_works, undetermined_date_count) = crate::sites::kansou::parse_table_works(&matched_table.table_html)?;
     stats.total_works_from_table = raw_works.len();
+    stats.works_with_undetermined_date = undetermined_date_count;
     log::info!("从表格中解析出 {} 个作品", raw_works.len());
+    if undetermined_date_count > 0 {
+        log::info!("过滤掉 {} 个日期未定的作品", undetermined_date_count);
+    }
 
     // 步骤3: 将实际作品分批发送给AI进行清理和关键字生成
     let batch_size = 20; // 每批处理20个作品

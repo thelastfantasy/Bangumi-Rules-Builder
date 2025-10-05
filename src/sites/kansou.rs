@@ -142,12 +142,13 @@ pub fn extract_tables_with_titles(html: &str) -> Result<Vec<TableInfo>, Box<dyn 
     Ok(tables)
 }
 
-pub fn parse_table_works(table_html: &str) -> Result<Vec<AnimeWork>, Box<dyn std::error::Error>> {
+pub fn parse_table_works(table_html: &str) -> Result<(Vec<AnimeWork>, usize), Box<dyn std::error::Error>> {
     let document = Html::parse_fragment(table_html);
     let tr_selector = Selector::parse("tr").unwrap();
     let td_selector = Selector::parse("td").unwrap();
     let th_selector = Selector::parse("th").unwrap();
     let mut works = Vec::new();
+    let mut undetermined_date_count = 0;
 
     // 首先找到表头，确定列的位置
     let mut title_col_index = None;
@@ -185,21 +186,25 @@ pub fn parse_table_works(table_html: &str) -> Result<Vec<AnimeWork>, Box<dyn std
                 .trim()
                 .to_string();
 
-            // 过滤掉日期未定的项目
-            if !title_cell.is_empty() && !crate::utils::is_undetermined_date(&date_cell) {
-                let air_date = crate::utils::parse_air_date(&date_cell);
+            // 统计日期未定的项目
+            if !title_cell.is_empty() {
+                if crate::utils::is_undetermined_date(&date_cell) {
+                    undetermined_date_count += 1;
+                } else {
+                    let air_date = crate::utils::parse_air_date(&date_cell);
 
-                works.push(AnimeWork {
-                    original_title: title_cell.clone(),
-                    cleaned_title: title_cell, // 暂时使用原标题，后面会清理
-                    air_date,
-                    keywords: Vec::new(),
-                });
+                    works.push(AnimeWork {
+                        original_title: title_cell.clone(),
+                        cleaned_title: title_cell, // 暂时使用原标题，后面会清理
+                        air_date,
+                        keywords: Vec::new(),
+                    });
+                }
             }
         }
     }
 
-    Ok(works)
+    Ok((works, undetermined_date_count))
 }
 
 

@@ -69,6 +69,7 @@ mod tests {
     use crate::meta_providers::bangumi::{search_bangumi_for_works, search_bangumi_with_keyword};
     use crate::models::AnimeWork;
     use crate::logger;
+    use crate::sites::kansou;
 
     #[tokio::test]
     async fn test_specific_work() -> Result<(), Box<dyn std::error::Error>> {
@@ -792,6 +793,60 @@ mod tests {
         log::error!("错误信息测试");
 
         log::info!("✅ 日志系统功能测试完成");
+        Ok(())
+    }
+
+    #[test]
+    fn test_undetermined_date_statistics() -> Result<(), Box<dyn std::error::Error>> {
+        // 测试日期未定作品统计功能
+        log::info!("🧪 测试日期未定作品统计功能...");
+
+        // 模拟包含日期未定作品的表格HTML
+        let test_html = r#"
+        <table>
+            <tr>
+                <th>作品名</th>
+                <th>放送開始日</th>
+            </tr>
+            <tr>
+                <td>作品1</td>
+                <td>2025/10/01(火)</td>
+            </tr>
+            <tr>
+                <td>作品2</td>
+                <td>未定</td>
+            </tr>
+            <tr>
+                <td>作品3</td>
+                <td>2025/10/02(水)</td>
+            </tr>
+            <tr>
+                <td>作品4</td>
+                <td>2025年10月</td>
+            </tr>
+            <tr>
+                <td>作品5</td>
+                <td>2025年秋</td>
+            </tr>
+        </table>
+        "#;
+
+        let (works, undetermined_count) = kansou::parse_table_works(test_html)?;
+
+        // 验证结果
+        // 根据 is_undetermined_date 逻辑：
+        // - 2025/10/01(火) -> 有效 (有 YYYY/MM/DD 格式)
+        // - 未定 -> 无效 (未定)
+        // - 2025/10/02(水) -> 有效 (有 YYYY/MM/DD 格式)
+        // - 2025年10月 -> 无效 (没有 YYYY/MM/DD 格式)
+        // - 2025年秋 -> 无效 (没有 YYYY/MM/DD 格式)
+        assert_eq!(works.len(), 2, "应该有2个有效作品");
+        assert_eq!(undetermined_count, 3, "应该有3个日期未定的作品");
+
+        log::info!("✅ 日期未定作品统计测试完成");
+        log::info!("   有效作品数量: {}", works.len());
+        log::info!("   日期未定作品数量: {}", undetermined_count);
+
         Ok(())
     }
 }

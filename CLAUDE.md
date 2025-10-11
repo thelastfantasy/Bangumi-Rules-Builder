@@ -104,6 +104,11 @@ This tool automates the process of creating download rules for new anime seasons
 - **log/env_logger/colored**: Logging system with colored output
 - **indicatif**: Progress bars
 
+### Planned Dependencies for AI Integration
+- **rig-core**: Unified AI model interface for multiple providers (DeepSeek, OpenAI, Claude, Ollama, local models)
+- **rig-openai** / **rig-anthropic**: Specific provider integrations (if needed)
+- **llm** / **llm-chain**: Local model inference (alternative to rig-core for direct local model support)
+
 ### Building and Testing
 ```bash
 # Build the project
@@ -162,8 +167,12 @@ src/
 ├── sites/
 │   └── kansou.rs       # Kansou.me site processing
 ├── ai/
-│   └── object_matcher/
-│       └── matcher.rs  # AI-powered work matching
+│   ├── deepseek/
+│   │   └── mod.rs      # DeepSeek API integration (current)
+│   ├── object_matcher/
+│   │   └── matcher.rs  # AI-powered work matching
+│   └── unified/
+│       └── mod.rs      # Planned: rig-core unified AI interface
 ├── meta_providers/
 │   └── bangumi/
 │       └── mod.rs      # Bangumi API integration
@@ -186,6 +195,12 @@ debug_date_matching.rs  # Date debugging tools
 - Title cleaning and keyword generation
 - Batch processing to manage token usage
 - **Extensible**: Supports multiple AI providers via `AiProvider` enum
+
+### Planned AI Integration Improvements
+- **rig-core Integration**: Plan to integrate rig-core crate for unified AI model interface
+  - **Benefits**: Unified interface for 20+ model providers, standardized request/response formats, built-in error handling and retry mechanisms
+  - **Features**: Support for local models (Llama), Ollama, OpenAI, Claude, and other providers through single API
+  - **Advantages**: Reduces boilerplate code, simplifies multi-model support, improves maintainability
 
 ### Bangumi API
 - Search endpoint: `https://api.bgm.tv/v0/search/subjects`
@@ -241,6 +256,22 @@ debug_date_matching.rs  # Date debugging tools
 2. Add API key handling in `match_and_process_with_ai()`
 3. Add provider configuration in `AiConfig`
 4. Update API request/response handling if needed
+
+### Planned: rig-core Integration for Unified AI Interface
+1. **Add rig-core dependency** and configure for multiple providers
+2. **Refactor AI module** to use unified `Model` trait from rig-core
+3. **Implement provider adapters** for DeepSeek, OpenAI, Claude, Ollama, and local models
+4. **Update configuration system** to support rig-core model configurations
+5. **Migrate existing AI logic** to use standardized request/response formats
+6. **Add local model support** through rig-core's local inference capabilities
+
+**rig-core Benefits for This Project:**
+- **Unified Interface**: Single API for all AI providers (DeepSeek, OpenAI, Claude, Ollama, local models)
+- **Standardized Output**: Consistent response formats regardless of provider
+- **Built-in Best Practices**: Automatic error handling, retry mechanisms, rate limiting
+- **Reduced Boilerplate**: Eliminates need for provider-specific API call logic
+- **Future-Proof**: Easy to add new AI providers as they become available
+- **Local Model Support**: Native support for Llama and other local models through unified interface
 
 ### Modifying Rule Patterns
 - Update `generate_qb_rules()` function

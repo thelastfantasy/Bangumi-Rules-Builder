@@ -1,5 +1,5 @@
 use crate::models::{AnimeWork, TableInfo, Task};
-use crate::utils::{extract_season_name_from_table_title, cache_results};
+use crate::utils::{cache_results, extract_season_name_from_table_title};
 use scraper::{Html, Selector};
 
 pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::Error>> {
@@ -42,7 +42,8 @@ pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::
     // 使用AI API智能匹配表格并处理作品
     let ai_config = crate::models::AiConfig::deepseek();
     let (matched_table, _processed_works, mut stats) =
-        crate::ai::deepseek::match_and_process_with_ai(&task.description, &tables, &ai_config).await?;
+        crate::ai::deepseek::match_and_process_with_ai(&task.description, &tables, &ai_config)
+            .await?;
 
     if let Some((table, works)) = matched_table {
         log::info!("匹配到的表格标题: {}", table.title);
@@ -50,7 +51,8 @@ pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::
         log::info!("提取到 {} 个作品", works.len());
 
         // 搜索Bangumi API
-        let bangumi_results = crate::meta_providers::bangumi::search_bangumi_for_works(&works).await?;
+        let bangumi_results =
+            crate::meta_providers::bangumi::search_bangumi_for_works(&works).await?;
 
         // 统计Bangumi搜索结果
         stats.works_with_bangumi_info = bangumi_results
@@ -66,15 +68,23 @@ pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::
         let season_name = extract_season_name_from_table_title(&table.title);
 
         // 生成qBittorrent规则
-        let rule_result = crate::rules::q_bittorrent::generate_qb_rules(&bangumi_results, task, &season_name)?;
+        let rule_result =
+            crate::rules::q_bittorrent::generate_qb_rules(&bangumi_results, task, &season_name)?;
         let rules_file = "qb_download_rules.json";
-        std::fs::write(rules_file, serde_json::to_string_pretty(&rule_result.rules)?)?;
+        std::fs::write(
+            rules_file,
+            serde_json::to_string_pretty(&rule_result.rules)?,
+        )?;
         stats.qb_rules_generated = rule_result.rules.as_object().unwrap().len();
         stats.qb_rules_failed = rule_result.failed_works.len();
         log::info!("qBittorrent规则已生成到: {}", rules_file);
 
         // 生成统计报告
-        crate::utils::generate_statistics_report(&stats, &bangumi_results, &rule_result.failed_works);
+        crate::utils::generate_statistics_report(
+            &stats,
+            &bangumi_results,
+            &rule_result.failed_works,
+        );
     } else {
         log::warn!("未找到匹配的表格");
     }
@@ -82,67 +92,63 @@ pub async fn process_kansou_site(task: &Task) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
-pub fn extract_tables_with_titles(html: &str) -> Result<Vec<TableInfo>, Box<dyn std::error::Error>> {
+pub fn extract_tables_with_titles(
+    html: &str,
+) -> Result<Vec<TableInfo>, Box<dyn std::error::Error>> {
     let document = Html::parse_document(html);
+
+    // 1. 收集所有h2标题（只包含有效的动画季节标题）
+    let h2_selector = Selector::parse("h2").unwrap();
+    let mut h2_titles = Vec::new();
+
+    for h2_element in document.select(&h2_selector) {
+        let title_text = h2_element.text().collect::<String>().trim().to_string();
+
+        // 检查是否是有效的动画季节标题
+        if title_text.contains("年") &&
+           (title_text.contains("月") || title_text.contains("春") ||
+            title_text.contains("夏") || title_text.contains("秋") ||
+            title_text.contains("冬") || title_text.contains("放送")) {
+            h2_titles.push(title_text);
+        }
+    }
+
+    log::debug!("找到 {} 个有效的h2标题: {:?}", h2_titles.len(), h2_titles);
+
+    // 2. 收集所有表格
     let table_selector = Selector::parse("table").unwrap();
     let mut tables = Vec::new();
 
-    for table_element in document.select(&table_selector) {
-        // 获取表格前面的文本作为标题
+    for (table_index, table_element) in document.select(&table_selector).enumerate() {
         let mut title = String::new();
 
-        // 查找表格前面的标题元素（h1-h6, strong, b等）
-        let heading_selectors = [
-            "h1", "h2", "h3", "h4", "h5", "h6", "strong", "b", ".title", ".heading",
-        ];
-
-        for selector_str in heading_selectors {
-            if let Ok(selector) = Selector::parse(selector_str)
-                && let Some(heading) = document.select(&selector).find(|_el| {
-                    // 简化逻辑：先尝试找到任何标题
-                    true
-                })
-            {
-                title = heading.text().collect::<String>().trim().to_string();
-                if !title.is_empty() {
-                    break;
-                }
+        // 3. 为表格分配标题：按索引配对
+        if table_index < h2_titles.len() {
+            title = h2_titles[table_index].clone();
+            log::debug!("表格[{}] 分配标题: {}", table_index, title);
+        } else {
+            // 如果h2标题不够，尝试查找其他标题或使用默认值
+            if let Some(id) = table_element.value().attr("id") {
+                title = format!("表格ID: {}", id);
+            } else if let Some(class) = table_element.value().attr("class") {
+                title = format!("表格类: {}", class);
+            } else {
+                title = format!("未命名表格-{}", table_index);
             }
-        }
-
-        // 如果没找到标题，查找表格前面的文本节点
-        if title.is_empty() {
-            // 简化方法：查找表格前面的兄弟元素
-            let mut prev_elements = Vec::new();
-
-            // 查找表格前面的元素
-            let all_elements: Vec<_> = document.select(&Selector::parse("*").unwrap()).collect();
-
-            for element in &all_elements {
-                if element.value().name() == "table" {
-                    break;
-                }
-                prev_elements.push(element);
-            }
-
-            // 从后往前查找第一个有文本的元素
-            for element in prev_elements.iter().rev() {
-                let element_text = element.text().collect::<String>().trim().to_string();
-                if !element_text.is_empty() {
-                    title = element_text;
-                    break;
-                }
-            }
+            log::debug!("表格[{}] 使用默认标题: {}", table_index, title);
         }
 
         let table_html = table_element.html();
         tables.push(TableInfo { title, table_html });
     }
 
+    log::info!("提取了 {} 个表格", tables.len());
     Ok(tables)
 }
 
-pub fn parse_table_works(table_html: &str) -> Result<(Vec<AnimeWork>, usize), Box<dyn std::error::Error>> {
+pub fn parse_table_works(
+    table_html: &str,
+) -> Result<(Vec<AnimeWork>, usize), Box<dyn std::error::Error>> {
     let document = Html::parse_fragment(table_html);
     let tr_selector = Selector::parse("tr").unwrap();
     let td_selector = Selector::parse("td").unwrap();
@@ -206,5 +212,3 @@ pub fn parse_table_works(table_html: &str) -> Result<(Vec<AnimeWork>, usize), Bo
 
     Ok((works, undetermined_date_count))
 }
-
-

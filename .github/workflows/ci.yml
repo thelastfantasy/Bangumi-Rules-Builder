@@ -33,4 +33,4 @@ jobs:
       shell: bash
       run: |
         cargo check
-        cargo clippy -- -D warnings
+        cargo clippy

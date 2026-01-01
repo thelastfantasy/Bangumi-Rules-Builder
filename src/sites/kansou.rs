@@ -120,7 +120,7 @@ pub fn extract_tables_with_titles(
     let mut tables = Vec::new();
 
     for (table_index, table_element) in document.select(&table_selector).enumerate() {
-        let mut title = String::new();
+        let title;
 
         // 3. 为表格分配标题：按索引配对
         if table_index < h2_titles.len() {
